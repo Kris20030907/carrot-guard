@@ -10,8 +10,8 @@
 - 敌人沿固定路线移动
 - 点击空地后可选择建造普通、减速、范围三种炮塔
 - 普通、快速、重甲三种怪物
-- 明确配置的 6 波关卡流程
-- 关卡数据从 `src/main/resources/levels/level1.properties` 加载，并保留内置 fallback
+- 两个资源配置关卡，每关包含 6 波敌人
+- 关卡数据从 `src/main/resources/levels/level*.properties` 加载，并保留内置 fallback
 - 障碍物占用格子，清除后奖励金币并释放建造位置
 - 鼠标悬停地图时显示建造预览和攻击范围
 - 点击空地选择建造位置，再点击格子旁的炮塔按钮完成建造
@@ -48,7 +48,7 @@ java -cp target/classes:/tmp/carrot-guard-test-out com.ktpro.carrotguard.GameSta
 
 ## 关卡配置
 
-当前第一关配置在 `src/main/resources/levels/level1.properties`：
+当前关卡配置在 `src/main/resources/levels/level1.properties` 和 `level2.properties`：
 
 - `startingCoins` / `startingLives`：初始金币和生命
 - `path`：敌人路径格子，格式为 `col,row;col,row`
@@ -63,6 +63,7 @@ java -cp target/classes:/tmp/carrot-guard-test-out com.ktpro.carrotguard.GameSta
 - 鼠标移动到地图格子：预览格子是否可作为建造位置
 - 顶部 Pause：暂停或继续
 - 顶部 Restart：重开当前关卡
+- 顶部 Next：胜利后进入下一关
 - 炮塔旁 DMG / SPD / RNG：分别升级伤害、攻速、范围
 - 炮塔旁 Sell：出售选中的炮塔
 - 炮塔信息面板：查看当前数值、下一次升级后的数值变化、费用和出售价值
@@ -75,4 +76,5 @@ java -cp target/classes:/tmp/carrot-guard-test-out com.ktpro.carrotguard.GameSta
 ## 近期路线
 
 - 增加地图障碍物、障碍物奖励和更多关卡
+- 增加关卡选择和通关结算界面
 - 加入音效、贴图和主菜单

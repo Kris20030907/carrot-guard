@@ -13,6 +13,9 @@ public final class GameStateSmokeCheck {
         verifyLevelConfigLoaded();
 
         GameState state = new GameState();
+        require(state.getLevelNumber() == 1, "new game should start on level one");
+        require(state.hasNextLevel(), "level one should have a next level available");
+        require(!state.advanceToNextLevel(), "next level should require victory");
         require(state.canBuildTowerAt(1, 2, TowerType.BASIC), "empty grass tile should be buildable");
         require(!state.canBuildTowerAt(2, 2, TowerType.BASIC), "obstacle tile should not be buildable");
         require(state.getObstacleAt(2, 2) != null, "obstacle should be queryable");
@@ -68,6 +71,13 @@ public final class GameStateSmokeCheck {
         require(config.getObstacles().size() == 6, "resource level should define six obstacles");
         require(config.getPath().hasOnlyOrthogonalSteps(), "resource path should be orthogonal");
         require(config.getPath().containsTile(5, 4), "resource path should include the first turn connector");
+        require(LevelConfig.hasLevel(2), "second level resource should be available");
+        LevelConfig secondLevel = LevelConfig.load(2);
+        require(secondLevel.getLevelNumber() == 2, "second level should report its level number");
+        require(secondLevel.getStartingCoins() == 180, "second level should define starting coins");
+        require(secondLevel.getWaveCount() == 6, "second level should define six waves");
+        require(secondLevel.getPath().hasOnlyOrthogonalSteps(), "second level path should be orthogonal");
+        require(secondLevel.getObstacles().size() == 7, "second level should define seven obstacles");
     }
 
     private static void verifyTowerUpgradeStats() {

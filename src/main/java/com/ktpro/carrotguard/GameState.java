@@ -5,19 +5,19 @@ import java.util.Iterator;
 import java.util.List;
 
 public final class GameState {
-    private final LevelConfig config = LevelConfig.firstLevel();
-    private final GamePath path = config.getPath();
     private final List<Enemy> enemies = new ArrayList<>();
     private final List<Obstacle> obstacles = new ArrayList<>();
     private final List<Tower> towers = new ArrayList<>();
     private final List<Projectile> projectiles = new ArrayList<>();
     private final List<HitEffect> hitEffects = new ArrayList<>();
 
+    private LevelConfig config;
+    private GamePath path;
     private Tower selectedTower;
     private int selectedBuildCol = -1;
     private int selectedBuildRow = -1;
-    private int coins = config.getStartingCoins();
-    private int lives = config.getStartingLives();
+    private int coins;
+    private int lives;
     private int waveIndex;
     private int enemiesSpawnedInWave;
     private double spawnTimer;
@@ -27,7 +27,7 @@ public final class GameState {
     private boolean paused;
 
     public GameState() {
-        resetObstacles();
+        loadLevel(1);
     }
 
     public void update(double deltaSeconds) {
@@ -113,6 +113,25 @@ public final class GameState {
     }
 
     public void restart() {
+        resetRunState();
+    }
+
+    public boolean advanceToNextLevel() {
+        int nextLevelNumber = config.getLevelNumber() + 1;
+        if (!won || !LevelConfig.hasLevel(nextLevelNumber)) {
+            return false;
+        }
+        loadLevel(nextLevelNumber);
+        return true;
+    }
+
+    private void loadLevel(int levelNumber) {
+        config = LevelConfig.load(levelNumber);
+        path = config.getPath();
+        resetRunState();
+    }
+
+    private void resetRunState() {
         enemies.clear();
         resetObstacles();
         towers.clear();
@@ -395,6 +414,10 @@ public final class GameState {
         return waveIndex + 1;
     }
 
+    public int getLevelNumber() {
+        return config.getLevelNumber();
+    }
+
     public int getMaxWave() {
         return config.getWaveCount();
     }
@@ -417,5 +440,9 @@ public final class GameState {
 
     public boolean isPaused() {
         return paused;
+    }
+
+    public boolean hasNextLevel() {
+        return LevelConfig.hasLevel(config.getLevelNumber() + 1);
     }
 }

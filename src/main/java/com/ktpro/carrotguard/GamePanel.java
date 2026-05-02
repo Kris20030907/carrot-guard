@@ -24,6 +24,7 @@ public final class GamePanel extends JPanel {
     public static final int HEIGHT = ROWS * TILE_SIZE + HUD_HEIGHT;
 
     private final GameState state = new GameState();
+    private final Rectangle nextButton = new Rectangle(466, 14, 78, 28);
     private final Rectangle pauseButton = new Rectangle(552, 14, 78, 28);
     private final Rectangle restartButton = new Rectangle(638, 14, 72, 28);
     private final Timer gameTimer = new Timer(16, event -> tick());
@@ -71,7 +72,9 @@ public final class GamePanel extends JPanel {
             return;
         }
         if (y < HUD_HEIGHT) {
-            if (pauseButton.contains(x, y)) {
+            if (nextButton.contains(x, y) && state.isWon() && state.hasNextLevel()) {
+                state.advanceToNextLevel();
+            } else if (pauseButton.contains(x, y)) {
                 state.togglePaused();
             } else if (restartButton.contains(x, y)) {
                 state.restart();
@@ -172,9 +175,11 @@ public final class GamePanel extends JPanel {
         g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 15));
         g.drawString("Coins: " + state.getCoins(), 20, 62);
         g.drawString("Lives: " + state.getLives(), 140, 62);
-        g.drawString("Wave: " + state.getWave() + "/" + state.getMaxWave(), 250, 62);
+        g.drawString("Level: " + state.getLevelNumber(), 250, 62);
+        g.drawString("Wave: " + state.getWave() + "/" + state.getMaxWave(), 350, 62);
 
         drawSelectionHint(g);
+        drawButton(g, nextButton, "Next", state.isWon() && state.hasNextLevel());
         drawButton(g, pauseButton, state.isPaused() ? "Resume" : "Pause", !state.isGameOver() && !state.isWon());
         drawButton(g, restartButton, "Restart", true);
     }
@@ -185,7 +190,7 @@ public final class GamePanel extends JPanel {
         String progress = state.getEnemiesSpawnedInWave() + "/" + state.getWaveEnemyCount();
         Tower selectedTower = state.getSelectedTower();
         if (state.hasSelectedBuildTile()) {
-            g.drawString("Build at: " + (state.getSelectedBuildCol() + 1) + "," + (state.getSelectedBuildRow() + 1), 330, 62);
+            g.drawString("Build at: " + (state.getSelectedBuildCol() + 1) + "," + (state.getSelectedBuildRow() + 1), 20, 96);
         } else if (selectedTower != null) {
             String text = selectedTower.getType().getDisplayName() + " L" + selectedTower.getLevel()
                     + "  DMG " + (int) selectedTower.getDamage()
@@ -196,9 +201,9 @@ public final class GamePanel extends JPanel {
                     + "/" + selectedTower.getUpgradeLevel(TowerUpgradeType.RANGE) + "]";
             g.drawString(text, 20, 96);
         } else {
-            g.drawString("Build: select a grass tile", 330, 62);
+            g.drawString("Build: select a grass tile", 20, 96);
         }
-        g.drawString("Enemies: " + progress, 500, 62);
+        g.drawString("Enemies: " + progress, 470, 62);
     }
 
     private void drawButton(Graphics2D g, Rectangle rect, String label, boolean enabled) {
@@ -603,7 +608,13 @@ public final class GamePanel extends JPanel {
             drawCentered(g, "Paused", HUD_HEIGHT + 220);
         }
         g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 18));
-        drawCentered(g, "Use the top buttons to resume or restart", HUD_HEIGHT + 258);
+        if (state.isWon() && state.hasNextLevel()) {
+            drawCentered(g, "Use Next to continue or Restart to replay", HUD_HEIGHT + 258);
+        } else if (state.isWon()) {
+            drawCentered(g, "Use Restart to replay this level", HUD_HEIGHT + 258);
+        } else {
+            drawCentered(g, "Use the top buttons to resume or restart", HUD_HEIGHT + 258);
+        }
     }
 
     private void drawCentered(Graphics2D g, String text, int y) {

@@ -8,8 +8,7 @@ import java.util.List;
 import java.util.Properties;
 
 public final class LevelConfig {
-    private static final String FIRST_LEVEL_RESOURCE = "/levels/level1.properties";
-
+    private final int levelNumber;
     private final GamePath path;
     private final int startingCoins;
     private final int startingLives;
@@ -17,12 +16,14 @@ public final class LevelConfig {
     private final List<WaveDefinition> waves;
 
     private LevelConfig(
+            int levelNumber,
             GamePath path,
             int startingCoins,
             int startingLives,
             List<ObstacleDefinition> obstacles,
             List<WaveDefinition> waves
     ) {
+        this.levelNumber = levelNumber;
         this.path = path;
         this.startingCoins = startingCoins;
         this.startingLives = startingLives;
@@ -31,16 +32,43 @@ public final class LevelConfig {
     }
 
     public static LevelConfig firstLevel() {
-        try {
-            return loadFromResource(FIRST_LEVEL_RESOURCE);
-        } catch (IllegalArgumentException e) {
-            System.err.println("Could not load " + FIRST_LEVEL_RESOURCE + ": " + e.getMessage());
-            return defaultFirstLevel();
+        return load(1);
+    }
+
+    public static LevelConfig load(int levelNumber) {
+        if (levelNumber <= 0) {
+            throw new IllegalArgumentException("level number must be positive");
         }
+        String resourcePath = resourcePath(levelNumber);
+        try {
+            return loadFromResource(resourcePath, levelNumber);
+        } catch (IllegalArgumentException e) {
+            if (levelNumber == 1) {
+                System.err.println("Could not load " + resourcePath + ": " + e.getMessage());
+                return defaultFirstLevel();
+            }
+            throw e;
+        }
+    }
+
+    public static boolean hasLevel(int levelNumber) {
+        if (levelNumber <= 0) {
+            return false;
+        }
+        try (InputStream input = LevelConfig.class.getResourceAsStream(resourcePath(levelNumber))) {
+            return input != null;
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
+    private static String resourcePath(int levelNumber) {
+        return "/levels/level" + levelNumber + ".properties";
     }
 
     static LevelConfig defaultFirstLevel() {
         return new LevelConfig(
+                1,
                 GamePath.defaultPath(),
                 160,
                 10,
@@ -76,7 +104,7 @@ public final class LevelConfig {
         );
     }
 
-    static LevelConfig loadFromResource(String resourcePath) {
+    static LevelConfig loadFromResource(String resourcePath, int levelNumber) {
         Properties properties = new Properties();
         try (InputStream input = LevelConfig.class.getResourceAsStream(resourcePath)) {
             if (input == null) {
@@ -92,7 +120,7 @@ public final class LevelConfig {
         GamePath path = GamePath.fromTiles(parsePath(requireValue(properties, "path")));
         List<ObstacleDefinition> obstacles = parseObstacles(requireValue(properties, "obstacles"));
         List<WaveDefinition> waves = parseWaves(properties);
-        return new LevelConfig(path, startingCoins, startingLives, obstacles, waves);
+        return new LevelConfig(levelNumber, path, startingCoins, startingLives, obstacles, waves);
     }
 
     private static int parseInt(Properties properties, String key) {
@@ -210,6 +238,10 @@ public final class LevelConfig {
 
     public GamePath getPath() {
         return path;
+    }
+
+    public int getLevelNumber() {
+        return levelNumber;
     }
 
     public int getStartingCoins() {
