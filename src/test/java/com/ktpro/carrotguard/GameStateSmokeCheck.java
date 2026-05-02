@@ -15,6 +15,8 @@ public final class GameStateSmokeCheck {
         GameState state = new GameState();
         require(state.getLevelNumber() == 1, "new game should start on level one");
         verifySpeedMultiplierCycle(state);
+        state.cycleSpeedMultiplier();
+        require(state.getSpeedMultiplier() == 2.0, "speed test should move state away from default");
         require(state.hasNextLevel(), "level one should have a next level available");
         require(!state.advanceToNextLevel(), "next level should require victory");
         require(state.canBuildTowerAt(1, 2, TowerType.BASIC), "empty grass tile should be buildable");
@@ -50,6 +52,7 @@ public final class GameStateSmokeCheck {
 
         state.restart();
         require(state.getWave() == 1, "restart should return to wave one");
+        require(state.getSpeedMultiplier() == 1.0, "restart should reset speed to 1x");
         require(state.getEnemies().isEmpty(), "restart should clear enemies");
         require(state.getTowers().isEmpty(), "restart should clear towers");
         require(!state.getObstacles().isEmpty(), "restart should restore obstacles");

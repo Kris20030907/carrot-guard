@@ -151,6 +151,7 @@ public final class GameState {
         lives = config.getStartingLives();
         waveIndex = 0;
         enemiesSpawnedInWave = 0;
+        speedIndex = DEFAULT_SPEED_INDEX;
         spawnTimer = 0;
         wavePause = 0;
         gameOver = false;
