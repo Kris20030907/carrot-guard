@@ -21,12 +21,12 @@ public final class GamePath {
 
     public static GamePath defaultPath() {
         List<Point> path = new ArrayList<>();
-        addHorizontal(path, -1, 4, 5);
-        addVertical(path, 5, 4, 1);
+        addHorizontal(path, -1, 5, 5);
+        addVertical(path, 5, 5, 1);
         addHorizontal(path, 6, 10, 1);
-        addVertical(path, 10, 2, 7);
+        addVertical(path, 10, 1, 7);
         addHorizontal(path, 11, 14, 7);
-        addVertical(path, 14, 6, 4);
+        addVertical(path, 14, 7, 4);
         addHorizontal(path, 15, 15, 4);
         return new GamePath(path);
     }
@@ -62,6 +62,19 @@ public final class GamePath {
         return waypoints.size();
     }
 
+    public boolean hasOnlyOrthogonalSteps() {
+        for (int i = 1; i < tiles.size(); i++) {
+            Point previous = tiles.get(i - 1);
+            Point current = tiles.get(i);
+            int dx = Math.abs(current.x - previous.x);
+            int dy = Math.abs(current.y - previous.y);
+            if (dx + dy != 1) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public int[] getGoalTile() {
         Point goal = tiles.get(tiles.size() - 2);
         return new int[] { goal.x, goal.y };
@@ -75,4 +88,3 @@ public final class GamePath {
         }
     }
 }
-

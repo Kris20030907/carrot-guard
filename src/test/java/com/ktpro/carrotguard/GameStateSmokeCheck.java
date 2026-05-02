@@ -5,6 +5,12 @@ public final class GameStateSmokeCheck {
     }
 
     public static void main(String[] args) {
+        GamePath path = GamePath.defaultPath();
+        require(path.hasOnlyOrthogonalSteps(), "default path should not skip or diagonal between tiles");
+        require(path.containsTile(5, 4), "default path should include the first turn connector");
+        require(path.containsTile(10, 2), "default path should include the second turn connector");
+        require(path.containsTile(14, 6), "default path should include the last turn connector");
+
         GameState state = new GameState();
         require(state.canBuildTowerAt(2, 2), "empty grass tile should be buildable");
         require(!state.canBuildTowerAt(0, 5), "path tile should not be buildable");
