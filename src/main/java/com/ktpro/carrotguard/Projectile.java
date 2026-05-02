@@ -3,17 +3,20 @@ package com.ktpro.carrotguard;
 public final class Projectile {
     private final Enemy target;
     private final double damage;
-    private final double speed = 360;
+    private final TowerType towerType;
+    private final double speed;
     private double x;
     private double y;
     private double age;
     private boolean expired;
 
-    public Projectile(double x, double y, Enemy target, double damage) {
+    public Projectile(double x, double y, Enemy target, double damage, TowerType towerType, double speed) {
         this.x = x;
         this.y = y;
         this.target = target;
         this.damage = damage;
+        this.towerType = towerType;
+        this.speed = speed;
     }
 
     public void update(double deltaSeconds) {
@@ -52,6 +55,10 @@ public final class Projectile {
         return damage;
     }
 
+    public TowerType getTowerType() {
+        return towerType;
+    }
+
     public double getX() {
         return x;
     }
@@ -60,4 +67,3 @@ public final class Projectile {
         return y;
     }
 }
-

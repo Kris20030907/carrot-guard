@@ -4,7 +4,6 @@ public final class LevelConfig {
     private final GamePath path;
     private final int startingCoins;
     private final int startingLives;
-    private final int towerCost;
     private final int waveBaseEnemyCount;
     private final int waveEnemyGrowth;
     private final int waveClearBonus;
@@ -14,7 +13,6 @@ public final class LevelConfig {
             GamePath path,
             int startingCoins,
             int startingLives,
-            int towerCost,
             int waveBaseEnemyCount,
             int waveEnemyGrowth,
             int waveClearBonus,
@@ -23,7 +21,6 @@ public final class LevelConfig {
         this.path = path;
         this.startingCoins = startingCoins;
         this.startingLives = startingLives;
-        this.towerCost = towerCost;
         this.waveBaseEnemyCount = waveBaseEnemyCount;
         this.waveEnemyGrowth = waveEnemyGrowth;
         this.waveClearBonus = waveClearBonus;
@@ -35,7 +32,6 @@ public final class LevelConfig {
                 GamePath.defaultPath(),
                 120,
                 10,
-                50,
                 8,
                 2,
                 20,
@@ -63,10 +59,6 @@ public final class LevelConfig {
         return startingLives;
     }
 
-    public int getTowerCost() {
-        return towerCost;
-    }
-
     public int getWaveClearBonus() {
         return waveClearBonus;
     }
@@ -75,4 +67,3 @@ public final class LevelConfig {
         return wavePauseSeconds;
     }
 }
-

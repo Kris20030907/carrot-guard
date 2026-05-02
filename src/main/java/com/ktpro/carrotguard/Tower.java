@@ -3,11 +3,9 @@ package com.ktpro.carrotguard;
 import java.util.List;
 
 public final class Tower {
-    private static final double BASE_RANGE = 130;
-    private static final double BASE_FIRE_INTERVAL = 0.55;
-    private static final double BASE_DAMAGE = 24;
     private static final int MAX_LEVEL = 3;
 
+    private final TowerType type;
     private final int col;
     private final int row;
     private final double x;
@@ -15,7 +13,8 @@ public final class Tower {
     private int level = 1;
     private double cooldown;
 
-    public Tower(int col, int row) {
+    public Tower(int col, int row, TowerType type) {
+        this.type = type;
         this.col = col;
         this.row = row;
         this.x = col * GamePanel.TILE_SIZE + GamePanel.TILE_SIZE / 2.0;
@@ -48,7 +47,7 @@ public final class Tower {
 
     public Projectile fireAt(Enemy target) {
         cooldown = getFireInterval();
-        return new Projectile(x, y, target, getDamage());
+        return new Projectile(x, y, target, getDamage(), type, type.getProjectileSpeed());
     }
 
     public boolean canUpgrade() {
@@ -65,15 +64,19 @@ public final class Tower {
         if (!canUpgrade()) {
             return 0;
         }
-        return 45 + level * 35;
+        return type.getCost() + level * 30;
     }
 
-    public int getSellValue(int baseCost) {
-        int invested = baseCost;
+    public int getSellValue() {
+        int invested = type.getCost();
         for (int currentLevel = 1; currentLevel < level; currentLevel++) {
-            invested += 45 + currentLevel * 35;
+            invested += type.getCost() + currentLevel * 30;
         }
         return Math.max(25, invested / 2);
+    }
+
+    public TowerType getType() {
+        return type;
     }
 
     public int getCol() {
@@ -85,15 +88,15 @@ public final class Tower {
     }
 
     public double getRange() {
-        return BASE_RANGE + (level - 1) * 20;
+        return type.getBaseRange() + (level - 1) * 20;
     }
 
     public double getDamage() {
-        return BASE_DAMAGE + (level - 1) * 16;
+        return type.getBaseDamage() + (level - 1) * 14;
     }
 
     public double getFireInterval() {
-        return Math.max(0.28, BASE_FIRE_INTERVAL - (level - 1) * 0.08);
+        return Math.max(0.28, type.getFireInterval() - (level - 1) * 0.08);
     }
 
     public int getLevel() {

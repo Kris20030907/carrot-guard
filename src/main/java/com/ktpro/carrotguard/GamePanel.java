@@ -16,13 +16,16 @@ public final class GamePanel extends JPanel implements Runnable {
     public static final int TILE_SIZE = 48;
     public static final int COLS = 15;
     public static final int ROWS = 10;
-    public static final int HUD_HEIGHT = 72;
+    public static final int HUD_HEIGHT = 96;
     public static final int WIDTH = COLS * TILE_SIZE;
     public static final int HEIGHT = ROWS * TILE_SIZE + HUD_HEIGHT;
 
     private final GameState state = new GameState();
-    private final Rectangle upgradeButton = new Rectangle(WIDTH - 210, 20, 88, 32);
-    private final Rectangle sellButton = new Rectangle(WIDTH - 112, 20, 82, 32);
+    private final Rectangle basicButton = new Rectangle(330, 14, 72, 28);
+    private final Rectangle slowButton = new Rectangle(408, 14, 72, 28);
+    private final Rectangle splashButton = new Rectangle(486, 14, 78, 28);
+    private final Rectangle upgradeButton = new Rectangle(WIDTH - 194, 54, 88, 30);
+    private final Rectangle sellButton = new Rectangle(WIDTH - 96, 54, 76, 30);
     private Thread gameThread;
     private volatile boolean running;
 
@@ -41,7 +44,13 @@ public final class GamePanel extends JPanel implements Runnable {
 
     private void handlePrimaryClick(int x, int y) {
         if (y < HUD_HEIGHT) {
-            if (upgradeButton.contains(x, y)) {
+            if (basicButton.contains(x, y)) {
+                state.selectTowerType(TowerType.BASIC);
+            } else if (slowButton.contains(x, y)) {
+                state.selectTowerType(TowerType.SLOW);
+            } else if (splashButton.contains(x, y)) {
+                state.selectTowerType(TowerType.SPLASH);
+            } else if (upgradeButton.contains(x, y)) {
                 state.tryUpgradeSelectedTower();
             } else if (sellButton.contains(x, y)) {
                 state.sellSelectedTower();
@@ -104,12 +113,35 @@ public final class GamePanel extends JPanel implements Runnable {
         g.drawString("Carrot Guard", 20, 30);
 
         g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 15));
-        g.drawString("Coins: " + state.getCoins(), 20, 56);
-        g.drawString("Lives: " + state.getLives(), 140, 56);
-        g.drawString("Wave: " + state.getWave(), 250, 56);
-        g.drawString("Build: " + state.getTowerCost() + " coins", 360, 56);
+        g.drawString("Coins: " + state.getCoins(), 20, 58);
+        g.drawString("Lives: " + state.getLives(), 140, 58);
+        g.drawString("Wave: " + state.getWave(), 250, 58);
+
+        drawBuildButtons(g);
 
         drawTowerActions(g);
+    }
+
+    private void drawBuildButtons(Graphics2D g) {
+        drawTypeButton(g, basicButton, TowerType.BASIC);
+        drawTypeButton(g, slowButton, TowerType.SLOW);
+        drawTypeButton(g, splashButton, TowerType.SPLASH);
+
+        TowerType selectedType = state.getSelectedTowerType();
+        g.setColor(new Color(255, 250, 235));
+        g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
+        g.drawString("Build: " + selectedType.getDisplayName() + " / " + selectedType.getCost(), 330, 64);
+    }
+
+    private void drawTypeButton(Graphics2D g, Rectangle rect, TowerType type) {
+        boolean selected = state.getSelectedTowerType() == type;
+        g.setColor(selected ? new Color(247, 216, 112) : new Color(82, 105, 86));
+        g.fillRoundRect(rect.x, rect.y, rect.width, rect.height, 8, 8);
+        g.setColor(type.getBodyColor());
+        g.fillOval(rect.x + 7, rect.y + 7, 14, 14);
+        g.setColor(selected ? new Color(61, 55, 39) : new Color(236, 240, 224));
+        g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 11));
+        g.drawString(type.getDisplayName(), rect.x + 25, rect.y + 18);
     }
 
     private void drawTowerActions(Graphics2D g) {
@@ -118,18 +150,18 @@ public final class GamePanel extends JPanel implements Runnable {
 
         g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
         if (hasSelection) {
-            String text = "Tower L" + selectedTower.getLevel()
+            String text = selectedTower.getType().getDisplayName() + " L" + selectedTower.getLevel()
                     + "  DMG " + (int) selectedTower.getDamage()
                     + "  RNG " + (int) selectedTower.getRange();
             g.setColor(new Color(255, 250, 235));
-            g.drawString(text, WIDTH - 315, 15);
+            g.drawString(text, 20, 82);
         }
 
         drawButton(g, upgradeButton,
                 hasSelection && selectedTower.canUpgrade() ? "Upgrade " + selectedTower.getUpgradeCost() : "Max/None",
                 hasSelection && selectedTower.canUpgrade() && state.getCoins() >= selectedTower.getUpgradeCost());
         drawButton(g, sellButton,
-                hasSelection ? "Sell " + selectedTower.getSellValue(state.getTowerCost()) : "Sell",
+                hasSelection ? "Sell " + selectedTower.getSellValue() : "Sell",
                 hasSelection);
     }
 
@@ -185,9 +217,9 @@ public final class GamePanel extends JPanel implements Runnable {
                 g.drawOval(centerX - range, centerY - range, range * 2, range * 2);
             }
 
-            g.setColor(tower == state.getSelectedTower() ? new Color(63, 95, 151) : new Color(50, 80, 126));
+            g.setColor(tower == state.getSelectedTower() ? tower.getType().getBodyColor().brighter() : tower.getType().getBodyColor());
             g.fillOval(centerX - 17, centerY - 17, 34, 34);
-            g.setColor(new Color(31, 49, 79));
+            g.setColor(tower.getType().getBarrelColor());
             g.fillRect(centerX - 4, centerY - 28, 8, 22);
             g.setColor(new Color(255, 250, 235));
             g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
@@ -195,9 +227,9 @@ public final class GamePanel extends JPanel implements Runnable {
         }
 
         for (Projectile projectile : state.getProjectiles()) {
-            g.setColor(new Color(255, 230, 79));
+            g.setColor(projectile.getTowerType().getBodyColor().brighter());
             g.fillOval((int) projectile.getX() - 5, (int) projectile.getY() - 5, 10, 10);
-            g.setColor(new Color(171, 123, 36));
+            g.setColor(projectile.getTowerType().getBarrelColor());
             g.drawOval((int) projectile.getX() - 5, (int) projectile.getY() - 5, 10, 10);
         }
 
@@ -208,6 +240,10 @@ public final class GamePanel extends JPanel implements Runnable {
             g.fillOval(x - 15, y - 15, 30, 30);
             g.setColor(new Color(95, 49, 41));
             g.drawOval(x - 15, y - 15, 30, 30);
+            if (enemy.isSlowed()) {
+                g.setColor(new Color(148, 222, 233, 160));
+                g.drawOval(x - 19, y - 19, 38, 38);
+            }
 
             int barWidth = 32;
             int healthWidth = (int) (barWidth * enemy.getHealthRatio());

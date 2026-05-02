@@ -12,6 +12,7 @@ public final class GameState {
     private final List<Projectile> projectiles = new ArrayList<>();
 
     private Tower selectedTower;
+    private TowerType selectedTowerType = TowerType.BASIC;
     private int coins = config.getStartingCoins();
     private int lives = config.getStartingLives();
     private int wave = 1;
@@ -42,13 +43,17 @@ public final class GameState {
             return true;
         }
         selectedTower = null;
-        if (coins < config.getTowerCost() || path.containsTile(col, row)) {
+        if (coins < selectedTowerType.getCost() || path.containsTile(col, row)) {
             return false;
         }
-        selectedTower = new Tower(col, row);
+        selectedTower = new Tower(col, row, selectedTowerType);
         towers.add(selectedTower);
-        coins -= config.getTowerCost();
+        coins -= selectedTowerType.getCost();
         return true;
+    }
+
+    public void selectTowerType(TowerType type) {
+        selectedTowerType = type;
     }
 
     public boolean trySelectTower(int col, int row) {
@@ -73,7 +78,7 @@ public final class GameState {
         if (selectedTower == null) {
             return false;
         }
-        coins += selectedTower.getSellValue(config.getTowerCost());
+        coins += selectedTower.getSellValue();
         towers.remove(selectedTower);
         selectedTower = null;
         return true;
@@ -138,12 +143,38 @@ public final class GameState {
                 continue;
             }
             if (projectile.hasHitTarget()) {
-                target.damage(projectile.getDamage());
+                applyProjectileHit(projectile);
                 iterator.remove();
-                if (target.isDead()) {
-                    enemies.remove(target);
-                    coins += target.getReward();
+                collectDefeatedEnemies();
+            }
+        }
+    }
+
+    private void applyProjectileHit(Projectile projectile) {
+        TowerType type = projectile.getTowerType();
+        Enemy target = projectile.getTarget();
+        target.damage(projectile.getDamage());
+        if (type.hasSlowEffect()) {
+            target.applySlow(type.getSlowFactor(), type.getSlowDuration());
+        }
+        if (type.hasSplashEffect()) {
+            double splashDamage = projectile.getDamage() * 0.65;
+            for (Enemy enemy : enemies) {
+                if (enemy != target && !enemy.isDead() && !enemy.hasReachedGoal()
+                        && enemy.distanceTo(target.getX(), target.getY()) <= type.getSplashRadius()) {
+                    enemy.damage(splashDamage);
                 }
+            }
+        }
+    }
+
+    private void collectDefeatedEnemies() {
+        Iterator<Enemy> iterator = enemies.iterator();
+        while (iterator.hasNext()) {
+            Enemy enemy = iterator.next();
+            if (enemy.isDead()) {
+                iterator.remove();
+                coins += enemy.getReward();
             }
         }
     }
@@ -188,7 +219,11 @@ public final class GameState {
     }
 
     public int getTowerCost() {
-        return config.getTowerCost();
+        return selectedTowerType.getCost();
+    }
+
+    public TowerType getSelectedTowerType() {
+        return selectedTowerType;
     }
 
     public int getCoins() {
