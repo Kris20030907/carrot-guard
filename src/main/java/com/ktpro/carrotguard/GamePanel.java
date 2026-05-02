@@ -65,6 +65,10 @@ public final class GamePanel extends JPanel implements Runnable {
         if (handleContextAction(x, y)) {
             return;
         }
+        Tower selectedTower = state.getSelectedTower();
+        if (selectedTower != null && towerInfoPanelRect(selectedTower).contains(x, y)) {
+            return;
+        }
         if (y < HUD_HEIGHT) {
             if (pauseButton.contains(x, y)) {
                 state.togglePaused();
@@ -163,6 +167,7 @@ public final class GamePanel extends JPanel implements Runnable {
         drawMap(g);
         drawBuildPreview(g);
         drawEntities(g);
+        drawTowerInfoPanel(g);
         drawContextMenu(g);
         drawOverlay(g);
         g.dispose();
@@ -357,6 +362,109 @@ public final class GamePanel extends JPanel implements Runnable {
         drawContextButton(g, sellOptionRect(), "Sell", String.valueOf(selectedTower.getSellValue()), true, new Color(238, 197, 92));
     }
 
+    private void drawTowerInfoPanel(Graphics2D g) {
+        Tower tower = state.getSelectedTower();
+        if (tower == null) {
+            return;
+        }
+
+        Rectangle rect = towerInfoPanelRect(tower);
+        g.setColor(new Color(47, 68, 55, 232));
+        g.fillRoundRect(rect.x, rect.y, rect.width, rect.height, 8, 8);
+        g.setColor(new Color(255, 250, 235, 190));
+        g.setStroke(new BasicStroke(2f));
+        g.drawRoundRect(rect.x, rect.y, rect.width, rect.height, 8, 8);
+
+        int left = rect.x + 12;
+        int right = rect.x + rect.width - 12;
+        int y = rect.y + 21;
+        g.setColor(new Color(255, 250, 235));
+        g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
+        g.drawString(tower.getType().getDisplayName() + " Tower L" + tower.getLevel(), left, y);
+        g.setColor(tower.getType().getBodyColor());
+        g.fillOval(right - 16, rect.y + 10, 13, 13);
+
+        y += 22;
+        g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 11));
+        g.setColor(new Color(226, 233, 215));
+        g.drawString("DMG " + (int) tower.getDamage(), left, y);
+        g.drawString("SPD " + String.format("%.2f", tower.getFireInterval()), left + 62, y);
+        g.drawString("RNG " + (int) tower.getRange(), left + 128, y);
+
+        y += 23;
+        for (TowerUpgradeType upgradeType : TowerUpgradeType.values()) {
+            drawUpgradeInfoRow(g, tower, upgradeType, left, right, y);
+            y += 23;
+        }
+
+        g.setColor(new Color(226, 233, 215));
+        g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 11));
+        g.drawString("Sell", left, rect.y + rect.height - 11);
+        drawRightAligned(g, String.valueOf(tower.getSellValue()), right, rect.y + rect.height - 11);
+    }
+
+    private void drawUpgradeInfoRow(Graphics2D g, Tower tower, TowerUpgradeType upgradeType, int left, int right, int y) {
+        boolean canUpgrade = tower.canUpgrade(upgradeType);
+        boolean canAfford = canUpgrade && state.getCoins() >= tower.getUpgradeCost(upgradeType);
+        g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 11));
+        g.setColor(canUpgrade ? new Color(255, 250, 235) : new Color(185, 195, 180));
+        g.drawString(upgradeType.getDisplayName() + " L" + tower.getUpgradeLevel(upgradeType), left, y);
+
+        g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 11));
+        g.setColor(canUpgrade ? new Color(226, 233, 215) : new Color(185, 195, 180));
+        g.drawString(upgradePreviewText(tower, upgradeType), left + 54, y);
+
+        g.setColor(canUpgrade ? (canAfford ? new Color(247, 216, 112) : new Color(255, 130, 120)) : new Color(185, 195, 180));
+        drawRightAligned(g, canUpgrade ? String.valueOf(tower.getUpgradeCost(upgradeType)) : "MAX", right, y);
+    }
+
+    private String upgradePreviewText(Tower tower, TowerUpgradeType upgradeType) {
+        if (!tower.canUpgrade(upgradeType)) {
+            return "Maxed";
+        }
+        return switch (upgradeType) {
+            case DAMAGE -> (int) tower.getDamage() + " -> " + (int) tower.getPreviewDamage(upgradeType);
+            case SPEED -> String.format("%.2f -> %.2f", tower.getFireInterval(), tower.getPreviewFireInterval(upgradeType));
+            case RANGE -> (int) tower.getRange() + " -> " + (int) tower.getPreviewRange(upgradeType);
+        };
+    }
+
+    private Rectangle towerInfoPanelRect(Tower tower) {
+        int width = 206;
+        int height = 138;
+        Rectangle contextArea = towerActionAreaRect(tower);
+        Rectangle[] candidates = {
+                new Rectangle(10, HUD_HEIGHT + 10, width, height),
+                new Rectangle(WIDTH - width - 10, HUD_HEIGHT + 10, width, height),
+                new Rectangle(10, HEIGHT - height - 10, width, height),
+                new Rectangle(WIDTH - width - 10, HEIGHT - height - 10, width, height)
+        };
+
+        Rectangle best = candidates[0];
+        double bestScore = -1;
+        double towerX = tower.getCol() * TILE_SIZE + TILE_SIZE / 2.0;
+        double towerY = HUD_HEIGHT + tower.getRow() * TILE_SIZE + TILE_SIZE / 2.0;
+        for (Rectangle candidate : candidates) {
+            if (candidate.intersects(contextArea)) {
+                continue;
+            }
+            double centerX = candidate.getCenterX();
+            double centerY = candidate.getCenterY();
+            double score = Math.hypot(centerX - towerX, centerY - towerY);
+            if (score > bestScore) {
+                best = candidate;
+                bestScore = score;
+            }
+        }
+        return best;
+    }
+
+    private Rectangle towerActionAreaRect(Tower tower) {
+        int upgradeWidth = TowerUpgradeType.values().length * 70 + (TowerUpgradeType.values().length - 1) * 6;
+        Point origin = contextMenuOrigin(tower.getCol(), tower.getRow(), upgradeWidth, 70);
+        return new Rectangle(origin.x, origin.y, upgradeWidth, 70);
+    }
+
     private void drawContextButton(Graphics2D g, Rectangle rect, String label, String detail, boolean enabled, Color accent) {
         g.setColor(enabled ? new Color(247, 216, 112) : new Color(157, 82, 76));
         g.fillRoundRect(rect.x, rect.y, rect.width, rect.height, 8, 8);
@@ -520,6 +628,11 @@ public final class GamePanel extends JPanel implements Runnable {
         FontMetrics metrics = g.getFontMetrics();
         int x = centerX - metrics.stringWidth(text) / 2;
         g.drawString(text, x, baselineY);
+    }
+
+    private void drawRightAligned(Graphics2D g, String text, int rightX, int baselineY) {
+        FontMetrics metrics = g.getFontMetrics();
+        g.drawString(text, rightX - metrics.stringWidth(text), baselineY);
     }
 
     private void drawRange(Graphics2D g, int centerX, int centerY, int range, Color fill, Color border) {

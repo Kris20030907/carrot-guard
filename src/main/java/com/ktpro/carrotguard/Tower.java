@@ -127,6 +127,18 @@ public final class Tower {
         return Math.max(0.24, type.getFireInterval() - speedLevel * 0.1);
     }
 
+    public double getPreviewDamage(TowerUpgradeType upgradeType) {
+        return upgradeType == TowerUpgradeType.DAMAGE ? getDamage() + 18 : getDamage();
+    }
+
+    public double getPreviewFireInterval(TowerUpgradeType upgradeType) {
+        return upgradeType == TowerUpgradeType.SPEED ? Math.max(0.24, getFireInterval() - 0.1) : getFireInterval();
+    }
+
+    public double getPreviewRange(TowerUpgradeType upgradeType) {
+        return upgradeType == TowerUpgradeType.RANGE ? getRange() + 24 : getRange();
+    }
+
     public int getLevel() {
         return 1 + damageLevel + speedLevel + rangeLevel;
     }
