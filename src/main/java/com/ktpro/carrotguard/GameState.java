@@ -136,16 +136,16 @@ public final class GameState {
         return selectedTower != null;
     }
 
-    public boolean tryUpgradeSelectedTower() {
-        if (selectedTower == null || !selectedTower.canUpgrade()) {
+    public boolean tryUpgradeSelectedTower(TowerUpgradeType upgradeType) {
+        if (selectedTower == null || !selectedTower.canUpgrade(upgradeType)) {
             return false;
         }
-        int cost = selectedTower.getUpgradeCost();
+        int cost = selectedTower.getUpgradeCost(upgradeType);
         if (coins < cost) {
             return false;
         }
         coins -= cost;
-        selectedTower.upgrade();
+        selectedTower.upgrade(upgradeType);
         return true;
     }
 

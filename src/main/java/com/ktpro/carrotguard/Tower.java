@@ -3,14 +3,16 @@ package com.ktpro.carrotguard;
 import java.util.List;
 
 public final class Tower {
-    private static final int MAX_LEVEL = 3;
+    private static final int MAX_UPGRADE_LEVEL = 2;
 
     private final TowerType type;
     private final int col;
     private final int row;
     private final double x;
     private final double y;
-    private int level = 1;
+    private int damageLevel;
+    private int speedLevel;
+    private int rangeLevel;
     private double cooldown;
 
     public Tower(int col, int row, TowerType type) {
@@ -66,27 +68,34 @@ public final class Tower {
         return new Projectile(x, y, target, getDamage(), type, type.getProjectileSpeed());
     }
 
-    public boolean canUpgrade() {
-        return level < MAX_LEVEL;
+    public boolean canUpgrade(TowerUpgradeType upgradeType) {
+        return getUpgradeLevel(upgradeType) < MAX_UPGRADE_LEVEL;
     }
 
-    public void upgrade() {
-        if (canUpgrade()) {
-            level++;
+    public void upgrade(TowerUpgradeType upgradeType) {
+        if (!canUpgrade(upgradeType)) {
+            return;
+        }
+        switch (upgradeType) {
+            case DAMAGE -> damageLevel++;
+            case SPEED -> speedLevel++;
+            case RANGE -> rangeLevel++;
         }
     }
 
-    public int getUpgradeCost() {
-        if (!canUpgrade()) {
+    public int getUpgradeCost(TowerUpgradeType upgradeType) {
+        if (!canUpgrade(upgradeType)) {
             return 0;
         }
-        return type.getCost() + level * 30;
+        return type.getCost() / 2 + (getUpgradeLevel(upgradeType) + 1) * 35;
     }
 
     public int getSellValue() {
         int invested = type.getCost();
-        for (int currentLevel = 1; currentLevel < level; currentLevel++) {
-            invested += type.getCost() + currentLevel * 30;
+        for (TowerUpgradeType upgradeType : TowerUpgradeType.values()) {
+            for (int currentLevel = 0; currentLevel < getUpgradeLevel(upgradeType); currentLevel++) {
+                invested += type.getCost() / 2 + (currentLevel + 1) * 35;
+            }
         }
         return Math.max(25, invested / 2);
     }
@@ -104,18 +113,26 @@ public final class Tower {
     }
 
     public double getRange() {
-        return type.getBaseRange() + (level - 1) * 20;
+        return type.getBaseRange() + rangeLevel * 24;
     }
 
     public double getDamage() {
-        return type.getBaseDamage() + (level - 1) * 14;
+        return type.getBaseDamage() + damageLevel * 18;
     }
 
     public double getFireInterval() {
-        return Math.max(0.28, type.getFireInterval() - (level - 1) * 0.08);
+        return Math.max(0.24, type.getFireInterval() - speedLevel * 0.1);
     }
 
     public int getLevel() {
-        return level;
+        return 1 + damageLevel + speedLevel + rangeLevel;
+    }
+
+    public int getUpgradeLevel(TowerUpgradeType upgradeType) {
+        return switch (upgradeType) {
+            case DAMAGE -> damageLevel;
+            case SPEED -> speedLevel;
+            case RANGE -> rangeLevel;
+        };
     }
 }

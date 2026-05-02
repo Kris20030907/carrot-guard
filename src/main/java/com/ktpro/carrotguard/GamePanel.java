@@ -92,9 +92,12 @@ public final class GamePanel extends JPanel implements Runnable {
 
         Tower selectedTower = state.getSelectedTower();
         if (selectedTower != null) {
-            if (upgradeOptionRect().contains(x, y)) {
-                state.tryUpgradeSelectedTower();
-                return true;
+            TowerUpgradeType[] upgrades = TowerUpgradeType.values();
+            for (int i = 0; i < upgrades.length; i++) {
+                if (upgradeOptionRect(i, upgrades.length).contains(x, y)) {
+                    state.tryUpgradeSelectedTower(upgrades[i]);
+                    return true;
+                }
             }
             if (sellOptionRect().contains(x, y)) {
                 state.sellSelectedTower();
@@ -193,7 +196,11 @@ public final class GamePanel extends JPanel implements Runnable {
         } else if (selectedTower != null) {
             String text = selectedTower.getType().getDisplayName() + " L" + selectedTower.getLevel()
                     + "  DMG " + (int) selectedTower.getDamage()
-                    + "  RNG " + (int) selectedTower.getRange();
+                    + "  SPD " + String.format("%.2f", selectedTower.getFireInterval())
+                    + "  RNG " + (int) selectedTower.getRange()
+                    + "  [" + selectedTower.getUpgradeLevel(TowerUpgradeType.DAMAGE)
+                    + "/" + selectedTower.getUpgradeLevel(TowerUpgradeType.SPEED)
+                    + "/" + selectedTower.getUpgradeLevel(TowerUpgradeType.RANGE) + "]";
             g.drawString(text, 20, 96);
         } else {
             g.drawString("Build: select a grass tile", 330, 62);
@@ -336,13 +343,17 @@ public final class GamePanel extends JPanel implements Runnable {
             return;
         }
 
-        boolean canUpgrade = selectedTower.canUpgrade();
-        boolean canAffordUpgrade = canUpgrade && state.getCoins() >= selectedTower.getUpgradeCost();
-        drawContextButton(g, upgradeOptionRect(),
-                canUpgrade ? "Upgrade" : "Max",
-                canUpgrade ? String.valueOf(selectedTower.getUpgradeCost()) : "",
-                canAffordUpgrade,
-                selectedTower.getType().getBodyColor());
+        TowerUpgradeType[] upgrades = TowerUpgradeType.values();
+        for (int i = 0; i < upgrades.length; i++) {
+            TowerUpgradeType upgradeType = upgrades[i];
+            boolean canUpgrade = selectedTower.canUpgrade(upgradeType);
+            boolean canAffordUpgrade = canUpgrade && state.getCoins() >= selectedTower.getUpgradeCost(upgradeType);
+            drawContextButton(g, upgradeOptionRect(i, upgrades.length),
+                    upgradeType.getDisplayName() + " " + selectedTower.getUpgradeLevel(upgradeType),
+                    canUpgrade ? String.valueOf(selectedTower.getUpgradeCost(upgradeType)) : "MAX",
+                    canAffordUpgrade,
+                    selectedTower.getType().getBodyColor());
+        }
         drawContextButton(g, sellOptionRect(), "Sell", String.valueOf(selectedTower.getSellValue()), true, new Color(238, 197, 92));
     }
 
@@ -365,16 +376,16 @@ public final class GamePanel extends JPanel implements Runnable {
         return new Rectangle(origin.x + index * 84, origin.y, 78, 32);
     }
 
-    private Rectangle upgradeOptionRect() {
+    private Rectangle upgradeOptionRect(int index, int count) {
         Tower tower = state.getSelectedTower();
-        Point origin = contextMenuOrigin(tower.getCol(), tower.getRow(), 174);
-        return new Rectangle(origin.x, origin.y, 96, 32);
+        Point origin = contextMenuOrigin(tower.getCol(), tower.getRow(), count * 70 + (count - 1) * 6);
+        return new Rectangle(origin.x + index * 76, origin.y, 70, 32);
     }
 
     private Rectangle sellOptionRect() {
         Tower tower = state.getSelectedTower();
-        Point origin = contextMenuOrigin(tower.getCol(), tower.getRow(), 174);
-        return new Rectangle(origin.x + 102, origin.y, 72, 32);
+        Point origin = contextMenuOrigin(tower.getCol(), tower.getRow(), 72);
+        return new Rectangle(origin.x, origin.y + 38, 72, 32);
     }
 
     private Point contextMenuOrigin(int col, int row, int width) {

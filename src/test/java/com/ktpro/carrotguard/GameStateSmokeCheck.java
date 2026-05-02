@@ -21,11 +21,14 @@ public final class GameStateSmokeCheck {
         require(state.canBuildSelectedTower(TowerType.BASIC), "basic tower should be buildable on selected tile");
         require(state.tryBuildSelectedTower(TowerType.BASIC), "basic tower should be built from selected tile");
         require(!state.canBuildTowerAt(1, 2, TowerType.BASIC), "occupied tile should not be buildable");
-        require(state.getTowerAt(1, 2) != null, "built tower should be queryable");
+        Tower basicTower = state.getTowerAt(1, 2);
+        require(basicTower != null, "built tower should be queryable");
         require(state.selectMapTile(7, 3), "second empty grass tile should be selectable");
         require(state.tryBuildSelectedTower(TowerType.SLOW), "slow tower should be buildable");
         require(state.selectMapTile(3, 3), "third empty grass tile should be selectable");
         require(!state.tryBuildSelectedTower(TowerType.SPLASH), "splash tower should be unaffordable after two builds");
+        verifyTowerUpgradeFlow();
+        verifyTowerUpgradeStats();
 
         state.togglePaused();
         for (int i = 0; i < 120; i++) {
@@ -53,5 +56,27 @@ public final class GameStateSmokeCheck {
         if (!condition) {
             throw new IllegalStateException(message);
         }
+    }
+
+    private static void verifyTowerUpgradeStats() {
+        Tower tower = new Tower(0, 0, TowerType.BASIC);
+        double baseDamage = tower.getDamage();
+        double baseInterval = tower.getFireInterval();
+        double baseRange = tower.getRange();
+        tower.upgrade(TowerUpgradeType.DAMAGE);
+        tower.upgrade(TowerUpgradeType.SPEED);
+        tower.upgrade(TowerUpgradeType.RANGE);
+        require(tower.getDamage() > baseDamage, "damage upgrade should increase damage");
+        require(tower.getFireInterval() < baseInterval, "speed upgrade should lower fire interval");
+        require(tower.getRange() > baseRange, "range upgrade should increase range");
+    }
+
+    private static void verifyTowerUpgradeFlow() {
+        GameState state = new GameState();
+        require(state.selectMapTile(1, 2), "upgrade test tile should be selectable");
+        require(state.tryBuildSelectedTower(TowerType.BASIC), "upgrade test tower should be buildable");
+        require(state.tryUpgradeSelectedTower(TowerUpgradeType.DAMAGE), "damage upgrade should be affordable");
+        Tower tower = state.getTowerAt(1, 2);
+        require(tower != null && tower.getUpgradeLevel(TowerUpgradeType.DAMAGE) == 1, "damage upgrade should be applied");
     }
 }
