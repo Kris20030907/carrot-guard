@@ -16,18 +16,18 @@ public final class GamePanel extends JPanel implements Runnable {
     public static final int TILE_SIZE = 48;
     public static final int COLS = 15;
     public static final int ROWS = 10;
-    public static final int HUD_HEIGHT = 96;
+    public static final int HUD_HEIGHT = 116;
     public static final int WIDTH = COLS * TILE_SIZE;
     public static final int HEIGHT = ROWS * TILE_SIZE + HUD_HEIGHT;
 
     private final GameState state = new GameState();
-    private final Rectangle basicButton = new Rectangle(330, 14, 72, 28);
-    private final Rectangle slowButton = new Rectangle(408, 14, 72, 28);
-    private final Rectangle splashButton = new Rectangle(486, 14, 78, 28);
-    private final Rectangle upgradeButton = new Rectangle(WIDTH - 194, 54, 88, 30);
-    private final Rectangle sellButton = new Rectangle(WIDTH - 96, 54, 76, 30);
-    private final Rectangle pauseButton = new Rectangle(WIDTH - 194, 14, 88, 28);
-    private final Rectangle restartButton = new Rectangle(WIDTH - 96, 14, 76, 28);
+    private final Rectangle basicButton = new Rectangle(300, 14, 72, 28);
+    private final Rectangle slowButton = new Rectangle(378, 14, 72, 28);
+    private final Rectangle splashButton = new Rectangle(456, 14, 78, 28);
+    private final Rectangle pauseButton = new Rectangle(552, 14, 78, 28);
+    private final Rectangle restartButton = new Rectangle(638, 14, 72, 28);
+    private final Rectangle upgradeButton = new Rectangle(WIDTH - 194, 76, 88, 30);
+    private final Rectangle sellButton = new Rectangle(WIDTH - 96, 76, 76, 30);
     private Thread gameThread;
     private volatile boolean running;
 
@@ -119,9 +119,9 @@ public final class GamePanel extends JPanel implements Runnable {
         g.drawString("Carrot Guard", 20, 30);
 
         g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 15));
-        g.drawString("Coins: " + state.getCoins(), 20, 58);
-        g.drawString("Lives: " + state.getLives(), 140, 58);
-        g.drawString("Wave: " + state.getWave() + "/" + state.getMaxWave(), 250, 58);
+        g.drawString("Coins: " + state.getCoins(), 20, 62);
+        g.drawString("Lives: " + state.getLives(), 140, 62);
+        g.drawString("Wave: " + state.getWave() + "/" + state.getMaxWave(), 250, 62);
 
         drawBuildButtons(g);
         drawButton(g, pauseButton, state.isPaused() ? "Resume" : "Pause", !state.isGameOver() && !state.isWon());
@@ -139,8 +139,8 @@ public final class GamePanel extends JPanel implements Runnable {
         g.setColor(new Color(255, 250, 235));
         g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
         String progress = state.getEnemiesSpawnedInWave() + "/" + state.getWaveEnemyCount();
-        g.drawString("Build: " + selectedType.getDisplayName() + " / " + selectedType.getCost()
-                + "    Enemies: " + progress, 330, 64);
+        g.drawString("Build: " + selectedType.getDisplayName() + " / " + selectedType.getCost(), 330, 62);
+        g.drawString("Enemies: " + progress, 500, 62);
     }
 
     private void drawTypeButton(Graphics2D g, Rectangle rect, TowerType type) {
@@ -164,7 +164,7 @@ public final class GamePanel extends JPanel implements Runnable {
                     + "  DMG " + (int) selectedTower.getDamage()
                     + "  RNG " + (int) selectedTower.getRange();
             g.setColor(new Color(255, 250, 235));
-            g.drawString(text, 20, 82);
+            g.drawString(text, 20, 96);
         }
 
         drawButton(g, upgradeButton,
