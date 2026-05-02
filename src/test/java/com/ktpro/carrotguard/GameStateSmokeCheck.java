@@ -12,18 +12,20 @@ public final class GameStateSmokeCheck {
         require(path.containsTile(14, 6), "default path should include the last turn connector");
 
         GameState state = new GameState();
-        require(state.canBuildTowerAt(1, 2), "empty grass tile should be buildable");
-        require(!state.canBuildTowerAt(2, 2), "obstacle tile should not be buildable");
+        require(state.canBuildTowerAt(1, 2, TowerType.BASIC), "empty grass tile should be buildable");
+        require(!state.canBuildTowerAt(2, 2, TowerType.BASIC), "obstacle tile should not be buildable");
         require(state.getObstacleAt(2, 2) != null, "obstacle should be queryable");
-        require(!state.canBuildTowerAt(0, 5), "path tile should not be buildable");
-        require(!state.canBuildTowerAt(-1, 2), "out-of-bounds tile should not be buildable");
-        require(state.tryBuildTower(1, 2), "basic tower should be buildable");
-        require(!state.canBuildTowerAt(1, 2), "occupied tile should not be buildable");
+        require(!state.canBuildTowerAt(0, 5, TowerType.BASIC), "path tile should not be buildable");
+        require(!state.canBuildTowerAt(-1, 2, TowerType.BASIC), "out-of-bounds tile should not be buildable");
+        require(state.selectMapTile(1, 2), "empty grass tile should be selectable for building");
+        require(state.canBuildSelectedTower(TowerType.BASIC), "basic tower should be buildable on selected tile");
+        require(state.tryBuildSelectedTower(TowerType.BASIC), "basic tower should be built from selected tile");
+        require(!state.canBuildTowerAt(1, 2, TowerType.BASIC), "occupied tile should not be buildable");
         require(state.getTowerAt(1, 2) != null, "built tower should be queryable");
-        state.selectTowerType(TowerType.SLOW);
-        require(state.tryBuildTower(7, 3), "slow tower should be buildable");
-        state.selectTowerType(TowerType.SPLASH);
-        require(!state.tryBuildTower(3, 3), "splash tower should be unaffordable after two builds");
+        require(state.selectMapTile(7, 3), "second empty grass tile should be selectable");
+        require(state.tryBuildSelectedTower(TowerType.SLOW), "slow tower should be buildable");
+        require(state.selectMapTile(3, 3), "third empty grass tile should be selectable");
+        require(!state.tryBuildSelectedTower(TowerType.SPLASH), "splash tower should be unaffordable after two builds");
 
         state.togglePaused();
         for (int i = 0; i < 120; i++) {

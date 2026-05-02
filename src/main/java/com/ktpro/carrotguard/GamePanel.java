@@ -68,11 +68,11 @@ public final class GamePanel extends JPanel implements Runnable {
     private void handlePrimaryClick(int x, int y) {
         if (y < HUD_HEIGHT) {
             if (basicButton.contains(x, y)) {
-                state.selectTowerType(TowerType.BASIC);
+                state.tryBuildSelectedTower(TowerType.BASIC);
             } else if (slowButton.contains(x, y)) {
-                state.selectTowerType(TowerType.SLOW);
+                state.tryBuildSelectedTower(TowerType.SLOW);
             } else if (splashButton.contains(x, y)) {
-                state.selectTowerType(TowerType.SPLASH);
+                state.tryBuildSelectedTower(TowerType.SPLASH);
             } else if (pauseButton.contains(x, y)) {
                 state.togglePaused();
             } else if (restartButton.contains(x, y)) {
@@ -87,7 +87,7 @@ public final class GamePanel extends JPanel implements Runnable {
 
         int col = x / TILE_SIZE;
         int row = (y - HUD_HEIGHT) / TILE_SIZE;
-        state.tryBuildTower(col, row);
+        state.selectMapTile(col, row);
     }
 
     private void updateHoverTile(int x, int y) {
@@ -171,27 +171,39 @@ public final class GamePanel extends JPanel implements Runnable {
     }
 
     private void drawBuildButtons(Graphics2D g) {
-        drawTypeButton(g, basicButton, TowerType.BASIC);
-        drawTypeButton(g, slowButton, TowerType.SLOW);
-        drawTypeButton(g, splashButton, TowerType.SPLASH);
+        drawBuildButton(g, basicButton, TowerType.BASIC);
+        drawBuildButton(g, slowButton, TowerType.SLOW);
+        drawBuildButton(g, splashButton, TowerType.SPLASH);
 
-        TowerType selectedType = state.getSelectedTowerType();
         g.setColor(new Color(255, 250, 235));
         g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
         String progress = state.getEnemiesSpawnedInWave() + "/" + state.getWaveEnemyCount();
-        g.drawString("Build: " + selectedType.getDisplayName() + " / " + selectedType.getCost(), 330, 62);
+        if (state.hasSelectedBuildTile()) {
+            g.drawString("Build at: " + (state.getSelectedBuildCol() + 1) + "," + (state.getSelectedBuildRow() + 1), 330, 62);
+        } else {
+            g.drawString("Build: select a grass tile", 330, 62);
+        }
         g.drawString("Enemies: " + progress, 500, 62);
     }
 
-    private void drawTypeButton(Graphics2D g, Rectangle rect, TowerType type) {
-        boolean selected = state.getSelectedTowerType() == type;
-        g.setColor(selected ? new Color(247, 216, 112) : new Color(82, 105, 86));
+    private void drawBuildButton(Graphics2D g, Rectangle rect, TowerType type) {
+        boolean hasTile = state.hasSelectedBuildTile();
+        boolean enabled = state.canBuildSelectedTower(type);
+        if (enabled) {
+            g.setColor(new Color(247, 216, 112));
+        } else if (hasTile) {
+            g.setColor(new Color(157, 82, 76));
+        } else {
+            g.setColor(new Color(82, 105, 86));
+        }
         g.fillRoundRect(rect.x, rect.y, rect.width, rect.height, 8, 8);
         g.setColor(type.getBodyColor());
         g.fillOval(rect.x + 7, rect.y + 7, 14, 14);
-        g.setColor(selected ? new Color(61, 55, 39) : new Color(236, 240, 224));
+        g.setColor(enabled ? new Color(61, 55, 39) : new Color(236, 240, 224));
         g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 11));
-        g.drawString(type.getDisplayName(), rect.x + 25, rect.y + 18);
+        g.drawString(type.getDisplayName(), rect.x + 25, rect.y + 14);
+        g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 10));
+        g.drawString(String.valueOf(type.getCost()), rect.x + 25, rect.y + 25);
     }
 
     private void drawTowerActions(Graphics2D g) {
@@ -255,6 +267,9 @@ public final class GamePanel extends JPanel implements Runnable {
 
     private void drawBuildPreview(Graphics2D g) {
         if (hoverCol < 0 || hoverRow < 0) {
+            if (state.hasSelectedBuildTile()) {
+                drawSelectedBuildTile(g);
+            }
             return;
         }
 
@@ -280,12 +295,13 @@ public final class GamePanel extends JPanel implements Runnable {
             return;
         }
 
-        boolean canBuild = state.canBuildTowerAt(hoverCol, hoverRow);
-        TowerType type = state.getSelectedTowerType();
-        Color fill = canBuild ? new Color(91, 207, 117, 105) : new Color(220, 76, 72, 110);
+        boolean selectedTile = state.hasSelectedBuildTile()
+                && state.getSelectedBuildCol() == hoverCol
+                && state.getSelectedBuildRow() == hoverRow;
+        boolean canBuild = canAnyTowerBuildAt(hoverCol, hoverRow);
+        Color fill = canBuild ? new Color(91, 207, 117, selectedTile ? 135 : 70) : new Color(220, 76, 72, 110);
         Color border = canBuild ? new Color(111, 242, 140) : new Color(255, 116, 108);
 
-        drawRange(g, centerX, centerY, (int) type.getBaseRange(), fill, border);
         g.setColor(fill);
         g.fillRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
         g.setColor(border);
@@ -293,16 +309,41 @@ public final class GamePanel extends JPanel implements Runnable {
         g.drawRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
 
         if (canBuild) {
-            g.setColor(type.getBodyColor());
-            g.fillOval(centerX - 13, centerY - 13, 26, 26);
-            g.setColor(type.getBarrelColor());
-            g.fillRect(centerX - 3, centerY - 24, 6, 18);
+            g.setColor(new Color(255, 250, 235));
+            g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 11));
+            drawCenteredAt(g, "+", centerX, centerY + 4);
         } else {
             g.setColor(new Color(255, 245, 238));
             g.setStroke(new BasicStroke(3f));
             g.drawLine(x + 14, y + 14, x + TILE_SIZE - 14, y + TILE_SIZE - 14);
             g.drawLine(x + TILE_SIZE - 14, y + 14, x + 14, y + TILE_SIZE - 14);
         }
+
+        if (state.hasSelectedBuildTile() && !selectedTile) {
+            drawSelectedBuildTile(g);
+        }
+    }
+
+    private void drawSelectedBuildTile(Graphics2D g) {
+        int col = state.getSelectedBuildCol();
+        int row = state.getSelectedBuildRow();
+        int x = col * TILE_SIZE;
+        int y = HUD_HEIGHT + row * TILE_SIZE;
+        boolean canBuildAny = canAnyTowerBuildAt(col, row);
+        g.setColor(canBuildAny ? new Color(91, 207, 117, 130) : new Color(220, 76, 72, 130));
+        g.fillRect(x + 3, y + 3, TILE_SIZE - 6, TILE_SIZE - 6);
+        g.setColor(canBuildAny ? new Color(111, 242, 140) : new Color(255, 116, 108));
+        g.setStroke(new BasicStroke(3f));
+        g.drawRect(x + 3, y + 3, TILE_SIZE - 6, TILE_SIZE - 6);
+    }
+
+    private boolean canAnyTowerBuildAt(int col, int row) {
+        for (TowerType type : TowerType.values()) {
+            if (state.canBuildTowerAt(col, row, type)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void drawEntities(Graphics2D g) {

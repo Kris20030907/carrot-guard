@@ -13,7 +13,8 @@ public final class GameState {
     private final List<Projectile> projectiles = new ArrayList<>();
 
     private Tower selectedTower;
-    private TowerType selectedTowerType = TowerType.BASIC;
+    private int selectedBuildCol = -1;
+    private int selectedBuildRow = -1;
     private int coins = config.getStartingCoins();
     private int lives = config.getStartingLives();
     private int waveIndex;
@@ -40,36 +41,53 @@ public final class GameState {
         checkWaveFinished();
     }
 
-    public boolean tryBuildTower(int col, int row) {
+    public boolean selectMapTile(int col, int row) {
         if (gameOver || won || col < 0 || row < 0 || col >= GamePanel.COLS || row >= GamePanel.ROWS) {
             return false;
         }
         Tower existing = findTower(col, row);
         if (existing != null) {
             selectedTower = existing;
+            clearSelectedBuildTile();
             return true;
         }
         selectedTower = null;
-        if (coins < selectedTowerType.getCost() || path.containsTile(col, row)) {
+
+        if (path.containsTile(col, row) || findObstacle(col, row) != null) {
+            clearSelectedBuildTile();
             return false;
         }
-        selectedTower = new Tower(col, row, selectedTowerType);
-        towers.add(selectedTower);
-        coins -= selectedTowerType.getCost();
+        selectedBuildCol = col;
+        selectedBuildRow = row;
         return true;
     }
 
-    public boolean canBuildTowerAt(int col, int row) {
+    public boolean tryBuildSelectedTower(TowerType type) {
+        if (!hasSelectedBuildTile() || !canBuildTowerAt(selectedBuildCol, selectedBuildRow, type)) {
+            return false;
+        }
+        selectedTower = new Tower(selectedBuildCol, selectedBuildRow, type);
+        towers.add(selectedTower);
+        coins -= type.getCost();
+        clearSelectedBuildTile();
+        return true;
+    }
+
+    public boolean canBuildTowerAt(int col, int row, TowerType type) {
         return !gameOver
                 && !won
                 && col >= 0
                 && row >= 0
                 && col < GamePanel.COLS
                 && row < GamePanel.ROWS
-                && coins >= selectedTowerType.getCost()
+                && coins >= type.getCost()
                 && !path.containsTile(col, row)
                 && findObstacle(col, row) == null
                 && findTower(col, row) == null;
+    }
+
+    public boolean canBuildSelectedTower(TowerType type) {
+        return hasSelectedBuildTile() && canBuildTowerAt(selectedBuildCol, selectedBuildRow, type);
     }
 
     public Tower getTowerAt(int col, int row) {
@@ -86,10 +104,6 @@ public final class GameState {
         return findObstacle(col, row);
     }
 
-    public void selectTowerType(TowerType type) {
-        selectedTowerType = type;
-    }
-
     public void togglePaused() {
         if (!gameOver && !won) {
             paused = !paused;
@@ -102,7 +116,7 @@ public final class GameState {
         towers.clear();
         projectiles.clear();
         selectedTower = null;
-        selectedTowerType = TowerType.BASIC;
+        clearSelectedBuildTile();
         coins = config.getStartingCoins();
         lives = config.getStartingLives();
         waveIndex = 0;
@@ -116,6 +130,9 @@ public final class GameState {
 
     public boolean trySelectTower(int col, int row) {
         selectedTower = findTower(col, row);
+        if (selectedTower != null) {
+            clearSelectedBuildTile();
+        }
         return selectedTower != null;
     }
 
@@ -304,6 +321,11 @@ public final class GameState {
         obstacles.add(Obstacle.rock(11, 8));
     }
 
+    private void clearSelectedBuildTile() {
+        selectedBuildCol = -1;
+        selectedBuildRow = -1;
+    }
+
     public GamePath getPath() {
         return path;
     }
@@ -329,11 +351,19 @@ public final class GameState {
     }
 
     public int getTowerCost() {
-        return selectedTowerType.getCost();
+        return hasSelectedBuildTile() ? TowerType.BASIC.getCost() : 0;
     }
 
-    public TowerType getSelectedTowerType() {
-        return selectedTowerType;
+    public boolean hasSelectedBuildTile() {
+        return selectedBuildCol >= 0 && selectedBuildRow >= 0;
+    }
+
+    public int getSelectedBuildCol() {
+        return selectedBuildCol;
+    }
+
+    public int getSelectedBuildRow() {
+        return selectedBuildRow;
     }
 
     public int getCoins() {
