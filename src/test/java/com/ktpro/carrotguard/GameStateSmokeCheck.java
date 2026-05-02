@@ -6,7 +6,12 @@ public final class GameStateSmokeCheck {
 
     public static void main(String[] args) {
         GameState state = new GameState();
+        require(state.canBuildTowerAt(2, 2), "empty grass tile should be buildable");
+        require(!state.canBuildTowerAt(0, 5), "path tile should not be buildable");
+        require(!state.canBuildTowerAt(-1, 2), "out-of-bounds tile should not be buildable");
         require(state.tryBuildTower(2, 2), "basic tower should be buildable");
+        require(!state.canBuildTowerAt(2, 2), "occupied tile should not be buildable");
+        require(state.getTowerAt(2, 2) != null, "built tower should be queryable");
         state.selectTowerType(TowerType.SLOW);
         require(state.tryBuildTower(7, 3), "slow tower should be buildable");
         state.selectTowerType(TowerType.SPLASH);
@@ -39,4 +44,3 @@ public final class GameStateSmokeCheck {
         }
     }
 }
-

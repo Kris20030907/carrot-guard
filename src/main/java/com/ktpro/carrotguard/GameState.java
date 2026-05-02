@@ -54,6 +54,25 @@ public final class GameState {
         return true;
     }
 
+    public boolean canBuildTowerAt(int col, int row) {
+        return !gameOver
+                && !won
+                && col >= 0
+                && row >= 0
+                && col < GamePanel.COLS
+                && row < GamePanel.ROWS
+                && coins >= selectedTowerType.getCost()
+                && !path.containsTile(col, row)
+                && findTower(col, row) == null;
+    }
+
+    public Tower getTowerAt(int col, int row) {
+        if (col < 0 || row < 0 || col >= GamePanel.COLS || row >= GamePanel.ROWS) {
+            return null;
+        }
+        return findTower(col, row);
+    }
+
     public void selectTowerType(TowerType type) {
         selectedTowerType = type;
     }

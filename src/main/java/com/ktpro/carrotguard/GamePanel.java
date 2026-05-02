@@ -11,6 +11,7 @@ import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
 
 public final class GamePanel extends JPanel implements Runnable {
     public static final int TILE_SIZE = 48;
@@ -30,6 +31,8 @@ public final class GamePanel extends JPanel implements Runnable {
     private final Rectangle sellButton = new Rectangle(WIDTH - 96, 76, 76, 30);
     private Thread gameThread;
     private volatile boolean running;
+    private int hoverCol = -1;
+    private int hoverRow = -1;
 
     public GamePanel() {
         setBackground(new Color(247, 239, 218));
@@ -40,6 +43,24 @@ public final class GamePanel extends JPanel implements Runnable {
                     handlePrimaryClick(event.getX(), event.getY());
                     repaint();
                 }
+            }
+
+            @Override
+            public void mouseExited(MouseEvent event) {
+                hoverCol = -1;
+                hoverRow = -1;
+                repaint();
+            }
+        });
+        addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseMoved(MouseEvent event) {
+                updateHoverTile(event.getX(), event.getY());
+            }
+
+            @Override
+            public void mouseDragged(MouseEvent event) {
+                updateHoverTile(event.getX(), event.getY());
             }
         });
     }
@@ -67,6 +88,24 @@ public final class GamePanel extends JPanel implements Runnable {
         int col = x / TILE_SIZE;
         int row = (y - HUD_HEIGHT) / TILE_SIZE;
         state.tryBuildTower(col, row);
+    }
+
+    private void updateHoverTile(int x, int y) {
+        int nextCol = -1;
+        int nextRow = -1;
+        if (y >= HUD_HEIGHT) {
+            nextCol = x / TILE_SIZE;
+            nextRow = (y - HUD_HEIGHT) / TILE_SIZE;
+            if (nextCol < 0 || nextCol >= COLS || nextRow < 0 || nextRow >= ROWS) {
+                nextCol = -1;
+                nextRow = -1;
+            }
+        }
+        if (hoverCol != nextCol || hoverRow != nextRow) {
+            hoverCol = nextCol;
+            hoverRow = nextRow;
+            repaint();
+        }
     }
 
     public void start() {
@@ -105,6 +144,7 @@ public final class GamePanel extends JPanel implements Runnable {
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         drawHud(g);
         drawMap(g);
+        drawBuildPreview(g);
         drawEntities(g);
         drawOverlay(g);
         g.dispose();
@@ -213,18 +253,56 @@ public final class GamePanel extends JPanel implements Runnable {
         g.fillOval(carrotX - 6, carrotY - 29, 18, 16);
     }
 
+    private void drawBuildPreview(Graphics2D g) {
+        if (hoverCol < 0 || hoverRow < 0) {
+            return;
+        }
+
+        int x = hoverCol * TILE_SIZE;
+        int y = HUD_HEIGHT + hoverRow * TILE_SIZE;
+        int centerX = x + TILE_SIZE / 2;
+        int centerY = y + TILE_SIZE / 2;
+        Tower hoverTower = state.getTowerAt(hoverCol, hoverRow);
+
+        if (hoverTower != null) {
+            drawRange(g, centerX, centerY, (int) hoverTower.getRange(), new Color(255, 246, 164, 80), new Color(255, 246, 164));
+            g.setColor(new Color(255, 246, 164, 80));
+            g.fillRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+            return;
+        }
+
+        boolean canBuild = state.canBuildTowerAt(hoverCol, hoverRow);
+        TowerType type = state.getSelectedTowerType();
+        Color fill = canBuild ? new Color(91, 207, 117, 105) : new Color(220, 76, 72, 110);
+        Color border = canBuild ? new Color(111, 242, 140) : new Color(255, 116, 108);
+
+        drawRange(g, centerX, centerY, (int) type.getBaseRange(), fill, border);
+        g.setColor(fill);
+        g.fillRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+        g.setColor(border);
+        g.setStroke(new BasicStroke(2f));
+        g.drawRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+
+        if (canBuild) {
+            g.setColor(type.getBodyColor());
+            g.fillOval(centerX - 13, centerY - 13, 26, 26);
+            g.setColor(type.getBarrelColor());
+            g.fillRect(centerX - 3, centerY - 24, 6, 18);
+        } else {
+            g.setColor(new Color(255, 245, 238));
+            g.setStroke(new BasicStroke(3f));
+            g.drawLine(x + 14, y + 14, x + TILE_SIZE - 14, y + TILE_SIZE - 14);
+            g.drawLine(x + TILE_SIZE - 14, y + 14, x + 14, y + TILE_SIZE - 14);
+        }
+    }
+
     private void drawEntities(Graphics2D g) {
         for (Tower tower : state.getTowers()) {
             int centerX = tower.getCol() * TILE_SIZE + TILE_SIZE / 2;
             int centerY = HUD_HEIGHT + tower.getRow() * TILE_SIZE + TILE_SIZE / 2;
 
             if (tower == state.getSelectedTower()) {
-                g.setColor(new Color(255, 246, 164, 90));
-                int range = (int) tower.getRange();
-                g.fillOval(centerX - range, centerY - range, range * 2, range * 2);
-                g.setColor(new Color(255, 246, 164));
-                g.setStroke(new BasicStroke(2f));
-                g.drawOval(centerX - range, centerY - range, range * 2, range * 2);
+                drawRange(g, centerX, centerY, (int) tower.getRange(), new Color(255, 246, 164, 90), new Color(255, 246, 164));
             }
 
             g.setColor(tower == state.getSelectedTower() ? tower.getType().getBodyColor().brighter() : tower.getType().getBodyColor());
@@ -298,5 +376,13 @@ public final class GamePanel extends JPanel implements Runnable {
         FontMetrics metrics = g.getFontMetrics();
         int x = centerX - metrics.stringWidth(text) / 2;
         g.drawString(text, x, baselineY);
+    }
+
+    private void drawRange(Graphics2D g, int centerX, int centerY, int range, Color fill, Color border) {
+        g.setColor(fill);
+        g.fillOval(centerX - range, centerY - range, range * 2, range * 2);
+        g.setColor(border);
+        g.setStroke(new BasicStroke(2f));
+        g.drawOval(centerX - range, centerY - range, range * 2, range * 2);
     }
 }
