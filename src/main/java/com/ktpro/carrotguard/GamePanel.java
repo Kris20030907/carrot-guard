@@ -1,6 +1,7 @@
 package com.ktpro.carrotguard;
 
 import javax.swing.JPanel;
+import javax.swing.Timer;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Font;
@@ -14,7 +15,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
 
-public final class GamePanel extends JPanel implements Runnable {
+public final class GamePanel extends JPanel {
     public static final int TILE_SIZE = 48;
     public static final int COLS = 15;
     public static final int ROWS = 10;
@@ -25,8 +26,8 @@ public final class GamePanel extends JPanel implements Runnable {
     private final GameState state = new GameState();
     private final Rectangle pauseButton = new Rectangle(552, 14, 78, 28);
     private final Rectangle restartButton = new Rectangle(638, 14, 72, 28);
-    private Thread gameThread;
-    private volatile boolean running;
+    private final Timer gameTimer = new Timer(16, event -> tick());
+    private long lastFrameNanos;
     private int hoverCol = -1;
     private int hoverRow = -1;
 
@@ -130,32 +131,19 @@ public final class GamePanel extends JPanel implements Runnable {
     }
 
     public void start() {
-        if (running) {
+        if (gameTimer.isRunning()) {
             return;
         }
-        running = true;
-        gameThread = new Thread(this, "carrot-guard-loop");
-        gameThread.start();
+        lastFrameNanos = System.nanoTime();
+        gameTimer.start();
     }
 
-    @Override
-    public void run() {
-        long lastFrame = System.nanoTime();
-        while (running) {
-            long now = System.nanoTime();
-            double deltaSeconds = (now - lastFrame) / 1_000_000_000.0;
-            lastFrame = now;
-
-            state.update(Math.min(deltaSeconds, 0.05));
-            repaint();
-
-            try {
-                Thread.sleep(16);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                running = false;
-            }
-        }
+    private void tick() {
+        long now = System.nanoTime();
+        double deltaSeconds = (now - lastFrameNanos) / 1_000_000_000.0;
+        lastFrameNanos = now;
+        state.update(Math.min(deltaSeconds, 0.05));
+        repaint();
     }
 
     @Override
