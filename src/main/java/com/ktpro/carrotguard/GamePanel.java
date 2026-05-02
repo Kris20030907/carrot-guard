@@ -7,6 +7,7 @@ import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -20,6 +21,8 @@ public final class GamePanel extends JPanel implements Runnable {
     public static final int HEIGHT = ROWS * TILE_SIZE + HUD_HEIGHT;
 
     private final GameState state = new GameState();
+    private final Rectangle upgradeButton = new Rectangle(WIDTH - 210, 20, 88, 32);
+    private final Rectangle sellButton = new Rectangle(WIDTH - 112, 20, 82, 32);
     private Thread gameThread;
     private volatile boolean running;
 
@@ -29,13 +32,26 @@ public final class GamePanel extends JPanel implements Runnable {
             @Override
             public void mousePressed(MouseEvent event) {
                 if (event.getButton() == MouseEvent.BUTTON1) {
-                    int col = event.getX() / TILE_SIZE;
-                    int row = (event.getY() - HUD_HEIGHT) / TILE_SIZE;
-                    state.tryBuildTower(col, row);
+                    handlePrimaryClick(event.getX(), event.getY());
                     repaint();
                 }
             }
         });
+    }
+
+    private void handlePrimaryClick(int x, int y) {
+        if (y < HUD_HEIGHT) {
+            if (upgradeButton.contains(x, y)) {
+                state.tryUpgradeSelectedTower();
+            } else if (sellButton.contains(x, y)) {
+                state.sellSelectedTower();
+            }
+            return;
+        }
+
+        int col = x / TILE_SIZE;
+        int row = (y - HUD_HEIGHT) / TILE_SIZE;
+        state.tryBuildTower(col, row);
     }
 
     public void start() {
@@ -91,12 +107,41 @@ public final class GamePanel extends JPanel implements Runnable {
         g.drawString("Coins: " + state.getCoins(), 20, 56);
         g.drawString("Lives: " + state.getLives(), 140, 56);
         g.drawString("Wave: " + state.getWave(), 250, 56);
-        g.drawString("Build: 50 coins", 360, 56);
+        g.drawString("Build: " + state.getTowerCost() + " coins", 360, 56);
 
-        g.setColor(new Color(247, 189, 78));
-        g.fillOval(WIDTH - 72, 17, 36, 36);
-        g.setColor(new Color(255, 239, 149));
-        g.fillOval(WIDTH - 61, 25, 14, 14);
+        drawTowerActions(g);
+    }
+
+    private void drawTowerActions(Graphics2D g) {
+        Tower selectedTower = state.getSelectedTower();
+        boolean hasSelection = selectedTower != null;
+
+        g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
+        if (hasSelection) {
+            String text = "Tower L" + selectedTower.getLevel()
+                    + "  DMG " + (int) selectedTower.getDamage()
+                    + "  RNG " + (int) selectedTower.getRange();
+            g.setColor(new Color(255, 250, 235));
+            g.drawString(text, WIDTH - 315, 15);
+        }
+
+        drawButton(g, upgradeButton,
+                hasSelection && selectedTower.canUpgrade() ? "Upgrade " + selectedTower.getUpgradeCost() : "Max/None",
+                hasSelection && selectedTower.canUpgrade() && state.getCoins() >= selectedTower.getUpgradeCost());
+        drawButton(g, sellButton,
+                hasSelection ? "Sell " + selectedTower.getSellValue(state.getTowerCost()) : "Sell",
+                hasSelection);
+    }
+
+    private void drawButton(Graphics2D g, Rectangle rect, String label, boolean enabled) {
+        g.setColor(enabled ? new Color(238, 197, 92) : new Color(104, 120, 107));
+        g.fillRoundRect(rect.x, rect.y, rect.width, rect.height, 8, 8);
+        g.setColor(enabled ? new Color(70, 59, 42) : new Color(201, 207, 194));
+        g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
+        FontMetrics metrics = g.getFontMetrics();
+        int textX = rect.x + (rect.width - metrics.stringWidth(label)) / 2;
+        int textY = rect.y + (rect.height + metrics.getAscent() - metrics.getDescent()) / 2;
+        g.drawString(label, textX, textY);
     }
 
     private void drawMap(Graphics2D g) {
@@ -131,14 +176,22 @@ public final class GamePanel extends JPanel implements Runnable {
             int centerX = tower.getCol() * TILE_SIZE + TILE_SIZE / 2;
             int centerY = HUD_HEIGHT + tower.getRow() * TILE_SIZE + TILE_SIZE / 2;
 
-            g.setColor(new Color(79, 105, 138, 70));
-            int range = (int) tower.getRange();
-            g.fillOval(centerX - range, centerY - range, range * 2, range * 2);
+            if (tower == state.getSelectedTower()) {
+                g.setColor(new Color(255, 246, 164, 90));
+                int range = (int) tower.getRange();
+                g.fillOval(centerX - range, centerY - range, range * 2, range * 2);
+                g.setColor(new Color(255, 246, 164));
+                g.setStroke(new BasicStroke(2f));
+                g.drawOval(centerX - range, centerY - range, range * 2, range * 2);
+            }
 
-            g.setColor(new Color(50, 80, 126));
+            g.setColor(tower == state.getSelectedTower() ? new Color(63, 95, 151) : new Color(50, 80, 126));
             g.fillOval(centerX - 17, centerY - 17, 34, 34);
             g.setColor(new Color(31, 49, 79));
             g.fillRect(centerX - 4, centerY - 28, 8, 22);
+            g.setColor(new Color(255, 250, 235));
+            g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
+            drawCenteredAt(g, String.valueOf(tower.getLevel()), centerX, centerY + 5);
         }
 
         for (Projectile projectile : state.getProjectiles()) {
@@ -184,5 +237,10 @@ public final class GamePanel extends JPanel implements Runnable {
         int x = (WIDTH - metrics.stringWidth(text)) / 2;
         g.drawString(text, x, y);
     }
-}
 
+    private void drawCenteredAt(Graphics2D g, String text, int centerX, int baselineY) {
+        FontMetrics metrics = g.getFontMetrics();
+        int x = centerX - metrics.stringWidth(text) / 2;
+        g.drawString(text, x, baselineY);
+    }
+}

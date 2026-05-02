@@ -5,17 +5,15 @@ import java.util.Iterator;
 import java.util.List;
 
 public final class GameState {
-    private static final int STARTING_COINS = 120;
-    private static final int STARTING_LIVES = 10;
-    private static final int TOWER_COST = 50;
-
-    private final GamePath path = GamePath.defaultPath();
+    private final LevelConfig config = LevelConfig.firstLevel();
+    private final GamePath path = config.getPath();
     private final List<Enemy> enemies = new ArrayList<>();
     private final List<Tower> towers = new ArrayList<>();
     private final List<Projectile> projectiles = new ArrayList<>();
 
-    private int coins = STARTING_COINS;
-    private int lives = STARTING_LIVES;
+    private Tower selectedTower;
+    private int coins = config.getStartingCoins();
+    private int lives = config.getStartingLives();
     private int wave = 1;
     private int enemiesSpawnedInWave;
     private double spawnTimer;
@@ -38,11 +36,46 @@ public final class GameState {
         if (gameOver || col < 0 || row < 0 || col >= GamePanel.COLS || row >= GamePanel.ROWS) {
             return false;
         }
-        if (coins < TOWER_COST || path.containsTile(col, row) || hasTower(col, row)) {
+        Tower existing = findTower(col, row);
+        if (existing != null) {
+            selectedTower = existing;
+            return true;
+        }
+        selectedTower = null;
+        if (coins < config.getTowerCost() || path.containsTile(col, row)) {
             return false;
         }
-        towers.add(new Tower(col, row));
-        coins -= TOWER_COST;
+        selectedTower = new Tower(col, row);
+        towers.add(selectedTower);
+        coins -= config.getTowerCost();
+        return true;
+    }
+
+    public boolean trySelectTower(int col, int row) {
+        selectedTower = findTower(col, row);
+        return selectedTower != null;
+    }
+
+    public boolean tryUpgradeSelectedTower() {
+        if (selectedTower == null || !selectedTower.canUpgrade()) {
+            return false;
+        }
+        int cost = selectedTower.getUpgradeCost();
+        if (coins < cost) {
+            return false;
+        }
+        coins -= cost;
+        selectedTower.upgrade();
+        return true;
+    }
+
+    public boolean sellSelectedTower() {
+        if (selectedTower == null) {
+            return false;
+        }
+        coins += selectedTower.getSellValue(config.getTowerCost());
+        towers.remove(selectedTower);
+        selectedTower = null;
         return true;
     }
 
@@ -52,7 +85,7 @@ public final class GameState {
             return;
         }
 
-        int totalEnemies = 8 + wave * 2;
+        int totalEnemies = config.enemyCountForWave(wave);
         if (enemiesSpawnedInWave >= totalEnemies) {
             return;
         }
@@ -61,7 +94,7 @@ public final class GameState {
         if (spawnTimer <= 0) {
             enemies.add(new Enemy(path, wave));
             enemiesSpawnedInWave++;
-            spawnTimer = Math.max(0.38, 1.0 - wave * 0.04);
+            spawnTimer = config.spawnIntervalForWave(wave);
         }
     }
 
@@ -116,22 +149,22 @@ public final class GameState {
     }
 
     private void checkWaveFinished() {
-        int totalEnemies = 8 + wave * 2;
+        int totalEnemies = config.enemyCountForWave(wave);
         if (enemiesSpawnedInWave >= totalEnemies && enemies.isEmpty()) {
             wave++;
             enemiesSpawnedInWave = 0;
-            wavePause = 2.0;
-            coins += 20;
+            wavePause = config.getWavePauseSeconds();
+            coins += config.getWaveClearBonus();
         }
     }
 
-    private boolean hasTower(int col, int row) {
+    private Tower findTower(int col, int row) {
         for (Tower tower : towers) {
             if (tower.getCol() == col && tower.getRow() == row) {
-                return true;
+                return tower;
             }
         }
-        return false;
+        return null;
     }
 
     public GamePath getPath() {
@@ -150,6 +183,14 @@ public final class GameState {
         return projectiles;
     }
 
+    public Tower getSelectedTower() {
+        return selectedTower;
+    }
+
+    public int getTowerCost() {
+        return config.getTowerCost();
+    }
+
     public int getCoins() {
         return coins;
     }
@@ -166,4 +207,3 @@ public final class GameState {
         return gameOver;
     }
 }
-
