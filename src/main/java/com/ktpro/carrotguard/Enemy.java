@@ -53,6 +53,10 @@ public final class Enemy implements Target {
         if (distance <= step) {
             x = target.x;
             y = target.y;
+            if (waypointIndex == path.getGoalWaypointIndex()) {
+                reachedGoal = true;
+                return;
+            }
             waypointIndex++;
             if (waypointIndex >= path.getWaypointCount()) {
                 reachedGoal = true;

@@ -29,6 +29,7 @@ public final class GameStateSmokeCheck {
         require(!state.tryBuildSelectedTower(TowerType.SPLASH), "splash tower should be unaffordable after two builds");
         verifyTowerUpgradeFlow();
         verifyTowerUpgradeStats();
+        verifyEnemyReachesGoalAtCarrot();
 
         state.togglePaused();
         for (int i = 0; i < 120; i++) {
@@ -79,5 +80,19 @@ public final class GameStateSmokeCheck {
         require(state.tryUpgradeSelectedTower(TowerUpgradeType.DAMAGE), "damage upgrade should be affordable");
         Tower tower = state.getTowerAt(1, 2);
         require(tower != null && tower.getUpgradeLevel(TowerUpgradeType.DAMAGE) == 1, "damage upgrade should be applied");
+    }
+
+    private static void verifyEnemyReachesGoalAtCarrot() {
+        GamePath path = GamePath.defaultPath();
+        Enemy enemy = new Enemy(path, 1, EnemyType.FAST);
+        for (int i = 0; i < 600 && !enemy.hasReachedGoal(); i++) {
+            enemy.update(0.05);
+        }
+        int[] goalTile = path.getGoalTile();
+        double goalX = goalTile[0] * GamePanel.TILE_SIZE + GamePanel.TILE_SIZE / 2.0;
+        double goalY = goalTile[1] * GamePanel.TILE_SIZE + GamePanel.TILE_SIZE / 2.0 + GamePanel.HUD_HEIGHT;
+        require(enemy.hasReachedGoal(), "enemy should reach goal before leaving the map");
+        require(Math.abs(enemy.getX() - goalX) < 0.01, "enemy should stop at carrot x when reaching goal");
+        require(Math.abs(enemy.getY() - goalY) < 0.01, "enemy should stop at carrot y when reaching goal");
     }
 }

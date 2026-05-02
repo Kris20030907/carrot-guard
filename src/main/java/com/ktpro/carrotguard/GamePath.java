@@ -62,6 +62,10 @@ public final class GamePath {
         return waypoints.size();
     }
 
+    public int getGoalWaypointIndex() {
+        return waypoints.size() - 2;
+    }
+
     public boolean hasOnlyOrthogonalSteps() {
         for (int i = 1; i < tiles.size(); i++) {
             Point previous = tiles.get(i - 1);
@@ -76,7 +80,7 @@ public final class GamePath {
     }
 
     public int[] getGoalTile() {
-        Point goal = tiles.get(tiles.size() - 2);
+        Point goal = tiles.get(getGoalWaypointIndex());
         return new int[] { goal.x, goal.y };
     }
 
