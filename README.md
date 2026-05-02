@@ -9,10 +9,12 @@
 - Maven 项目结构
 - 敌人沿固定路线移动
 - 可选择普通、减速、范围三种炮塔
+- 普通、快速、重甲三种怪物
+- 明确配置的 6 波关卡流程
 - 点击空地建造当前选中的炮塔
 - 点击炮塔选中，并可升级或出售
 - 炮塔自动索敌并发射子弹
-- 金币、生命值、波次和游戏结束状态
+- 金币、生命值、波次、暂停、重开、胜利和失败状态
 - 关卡基础参数集中在 `LevelConfig`
 
 ## 运行
@@ -30,14 +32,25 @@ javac -d out $(find src/main/java -name "*.java")
 java -cp out com.ktpro.carrotguard.Main
 ```
 
+## 基础检查
+
+```bash
+mvn -q -DskipTests package
+javac -cp target/classes -d /tmp/carrot-guard-test-out $(find src/test/java -name "*.java")
+java -cp target/classes:/tmp/carrot-guard-test-out com.ktpro.carrotguard.GameStateSmokeCheck
+```
+
 ## 操作
 
 - 鼠标左键点击草地格子：建造炮塔
 - 鼠标左键点击已有炮塔：选中炮塔
 - 顶部 Basic / Slow / Splash：选择要建造的炮塔类型
+- 顶部 Pause：暂停或继续
+- 顶部 Restart：重开当前关卡
 - 顶部 Upgrade：升级选中的炮塔
 - 顶部 Sell：出售选中的炮塔
 - 普通炮塔价格低且输出稳定，减速炮塔会降低敌人速度，范围炮塔会造成溅射伤害
+- 普通怪均衡，快速怪速度高，重甲怪生命高且漏怪时扣 2 点生命
 - 敌人抵达终点会扣生命值
 - 击败敌人会获得金币
 
@@ -45,5 +58,5 @@ java -cp out com.ktpro.carrotguard.Main
 
 - 增加更完整的炮塔信息面板
 - 增加关卡配置文件
-- 增加怪物类型、波次编辑和地图元素
+- 增加地图障碍物、障碍物奖励和更多关卡
 - 加入音效、贴图和主菜单

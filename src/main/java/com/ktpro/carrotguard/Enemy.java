@@ -4,6 +4,7 @@ import java.awt.Point;
 
 public final class Enemy {
     private final GamePath path;
+    private final EnemyType type;
     private final double maxHealth;
     private final double speed;
     private final int reward;
@@ -16,15 +17,16 @@ public final class Enemy {
     private double slowTimer;
     private boolean reachedGoal;
 
-    public Enemy(GamePath path, int wave) {
+    public Enemy(GamePath path, int wave, EnemyType type) {
         this.path = path;
+        this.type = type;
         Point start = path.getWaypoint(0);
         this.x = start.x;
         this.y = start.y;
-        this.maxHealth = 42 + wave * 10;
+        this.maxHealth = type.healthForWave(wave);
         this.health = maxHealth;
-        this.speed = 58 + wave * 3;
-        this.reward = 14 + wave;
+        this.speed = type.speedForWave(wave);
+        this.reward = type.rewardForWave(wave);
     }
 
     public void update(double deltaSeconds) {
@@ -99,6 +101,14 @@ public final class Enemy {
 
     public int getReward() {
         return reward;
+    }
+
+    public int getLifeDamage() {
+        return type.getLifeDamage();
+    }
+
+    public EnemyType getType() {
+        return type;
     }
 
     public boolean isSlowed() {

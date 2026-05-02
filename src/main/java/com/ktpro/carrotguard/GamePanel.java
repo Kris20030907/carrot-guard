@@ -26,6 +26,8 @@ public final class GamePanel extends JPanel implements Runnable {
     private final Rectangle splashButton = new Rectangle(486, 14, 78, 28);
     private final Rectangle upgradeButton = new Rectangle(WIDTH - 194, 54, 88, 30);
     private final Rectangle sellButton = new Rectangle(WIDTH - 96, 54, 76, 30);
+    private final Rectangle pauseButton = new Rectangle(WIDTH - 194, 14, 88, 28);
+    private final Rectangle restartButton = new Rectangle(WIDTH - 96, 14, 76, 28);
     private Thread gameThread;
     private volatile boolean running;
 
@@ -50,6 +52,10 @@ public final class GamePanel extends JPanel implements Runnable {
                 state.selectTowerType(TowerType.SLOW);
             } else if (splashButton.contains(x, y)) {
                 state.selectTowerType(TowerType.SPLASH);
+            } else if (pauseButton.contains(x, y)) {
+                state.togglePaused();
+            } else if (restartButton.contains(x, y)) {
+                state.restart();
             } else if (upgradeButton.contains(x, y)) {
                 state.tryUpgradeSelectedTower();
             } else if (sellButton.contains(x, y)) {
@@ -115,9 +121,11 @@ public final class GamePanel extends JPanel implements Runnable {
         g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 15));
         g.drawString("Coins: " + state.getCoins(), 20, 58);
         g.drawString("Lives: " + state.getLives(), 140, 58);
-        g.drawString("Wave: " + state.getWave(), 250, 58);
+        g.drawString("Wave: " + state.getWave() + "/" + state.getMaxWave(), 250, 58);
 
         drawBuildButtons(g);
+        drawButton(g, pauseButton, state.isPaused() ? "Resume" : "Pause", !state.isGameOver() && !state.isWon());
+        drawButton(g, restartButton, "Restart", true);
 
         drawTowerActions(g);
     }
@@ -130,7 +138,9 @@ public final class GamePanel extends JPanel implements Runnable {
         TowerType selectedType = state.getSelectedTowerType();
         g.setColor(new Color(255, 250, 235));
         g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
-        g.drawString("Build: " + selectedType.getDisplayName() + " / " + selectedType.getCost(), 330, 64);
+        String progress = state.getEnemiesSpawnedInWave() + "/" + state.getWaveEnemyCount();
+        g.drawString("Build: " + selectedType.getDisplayName() + " / " + selectedType.getCost()
+                + "    Enemies: " + progress, 330, 64);
     }
 
     private void drawTypeButton(Graphics2D g, Rectangle rect, TowerType type) {
@@ -236,36 +246,46 @@ public final class GamePanel extends JPanel implements Runnable {
         for (Enemy enemy : state.getEnemies()) {
             int x = (int) enemy.getX();
             int y = (int) enemy.getY();
-            g.setColor(new Color(143, 76, 57));
-            g.fillOval(x - 15, y - 15, 30, 30);
-            g.setColor(new Color(95, 49, 41));
-            g.drawOval(x - 15, y - 15, 30, 30);
+            int radius = enemy.getType().getRadius();
+            g.setColor(enemy.getType().getBodyColor());
+            g.fillOval(x - radius, y - radius, radius * 2, radius * 2);
+            g.setColor(enemy.getType().getBorderColor());
+            g.drawOval(x - radius, y - radius, radius * 2, radius * 2);
             if (enemy.isSlowed()) {
                 g.setColor(new Color(148, 222, 233, 160));
-                g.drawOval(x - 19, y - 19, 38, 38);
+                g.drawOval(x - radius - 4, y - radius - 4, (radius + 4) * 2, (radius + 4) * 2);
             }
+            g.setColor(new Color(255, 250, 235));
+            g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 10));
+            drawCenteredAt(g, enemy.getType().getDisplayName().substring(0, 1), x, y + 4);
 
-            int barWidth = 32;
+            int barWidth = radius * 2 + 4;
             int healthWidth = (int) (barWidth * enemy.getHealthRatio());
             g.setColor(new Color(73, 43, 35));
-            g.fillRect(x - barWidth / 2, y - 25, barWidth, 5);
+            g.fillRect(x - barWidth / 2, y - radius - 10, barWidth, 5);
             g.setColor(new Color(97, 201, 98));
-            g.fillRect(x - barWidth / 2, y - 25, healthWidth, 5);
+            g.fillRect(x - barWidth / 2, y - radius - 10, healthWidth, 5);
         }
     }
 
     private void drawOverlay(Graphics2D g) {
-        if (!state.isGameOver()) {
+        if (!state.isGameOver() && !state.isWon() && !state.isPaused()) {
             return;
         }
 
-        g.setColor(new Color(0, 0, 0, 150));
+        g.setColor(new Color(0, 0, 0, state.isPaused() ? 95 : 150));
         g.fillRect(0, HUD_HEIGHT, WIDTH, HEIGHT - HUD_HEIGHT);
         g.setColor(Color.WHITE);
-        g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 42));
-        drawCentered(g, "Game Over", HUD_HEIGHT + 220);
+        g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 38));
+        if (state.isWon()) {
+            drawCentered(g, "Victory", HUD_HEIGHT + 220);
+        } else if (state.isGameOver()) {
+            drawCentered(g, "Game Over", HUD_HEIGHT + 220);
+        } else {
+            drawCentered(g, "Paused", HUD_HEIGHT + 220);
+        }
         g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 18));
-        drawCentered(g, "Restart the app to try again", HUD_HEIGHT + 258);
+        drawCentered(g, "Use the top buttons to resume or restart", HUD_HEIGHT + 258);
     }
 
     private void drawCentered(Graphics2D g, String text, int y) {

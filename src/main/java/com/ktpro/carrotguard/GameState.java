@@ -15,14 +15,16 @@ public final class GameState {
     private TowerType selectedTowerType = TowerType.BASIC;
     private int coins = config.getStartingCoins();
     private int lives = config.getStartingLives();
-    private int wave = 1;
+    private int waveIndex;
     private int enemiesSpawnedInWave;
     private double spawnTimer;
     private double wavePause;
     private boolean gameOver;
+    private boolean won;
+    private boolean paused;
 
     public void update(double deltaSeconds) {
-        if (gameOver) {
+        if (gameOver || won || paused) {
             return;
         }
 
@@ -34,7 +36,7 @@ public final class GameState {
     }
 
     public boolean tryBuildTower(int col, int row) {
-        if (gameOver || col < 0 || row < 0 || col >= GamePanel.COLS || row >= GamePanel.ROWS) {
+        if (gameOver || won || col < 0 || row < 0 || col >= GamePanel.COLS || row >= GamePanel.ROWS) {
             return false;
         }
         Tower existing = findTower(col, row);
@@ -54,6 +56,29 @@ public final class GameState {
 
     public void selectTowerType(TowerType type) {
         selectedTowerType = type;
+    }
+
+    public void togglePaused() {
+        if (!gameOver && !won) {
+            paused = !paused;
+        }
+    }
+
+    public void restart() {
+        enemies.clear();
+        towers.clear();
+        projectiles.clear();
+        selectedTower = null;
+        selectedTowerType = TowerType.BASIC;
+        coins = config.getStartingCoins();
+        lives = config.getStartingLives();
+        waveIndex = 0;
+        enemiesSpawnedInWave = 0;
+        spawnTimer = 0;
+        wavePause = 0;
+        gameOver = false;
+        won = false;
+        paused = false;
     }
 
     public boolean trySelectTower(int col, int row) {
@@ -90,16 +115,18 @@ public final class GameState {
             return;
         }
 
-        int totalEnemies = config.enemyCountForWave(wave);
+        WaveDefinition wave = currentWave();
+        int totalEnemies = wave.getTotalEnemyCount();
         if (enemiesSpawnedInWave >= totalEnemies) {
             return;
         }
 
         spawnTimer -= deltaSeconds;
         if (spawnTimer <= 0) {
-            enemies.add(new Enemy(path, wave));
+            EnemyType type = wave.enemyTypeAt(enemiesSpawnedInWave);
+            enemies.add(new Enemy(path, waveIndex + 1, type));
             enemiesSpawnedInWave++;
-            spawnTimer = config.spawnIntervalForWave(wave);
+            spawnTimer = wave.getSpawnInterval();
         }
     }
 
@@ -110,7 +137,7 @@ public final class GameState {
             enemy.update(deltaSeconds);
             if (enemy.hasReachedGoal()) {
                 iterator.remove();
-                lives--;
+                lives -= enemy.getLifeDamage();
                 if (lives <= 0) {
                     gameOver = true;
                 }
@@ -180,13 +207,23 @@ public final class GameState {
     }
 
     private void checkWaveFinished() {
-        int totalEnemies = config.enemyCountForWave(wave);
+        WaveDefinition wave = currentWave();
+        int totalEnemies = wave.getTotalEnemyCount();
         if (enemiesSpawnedInWave >= totalEnemies && enemies.isEmpty()) {
-            wave++;
+            coins += wave.getClearBonus();
+            if (waveIndex >= config.getWaveCount() - 1) {
+                won = true;
+                return;
+            }
+            waveIndex++;
             enemiesSpawnedInWave = 0;
-            wavePause = config.getWavePauseSeconds();
-            coins += config.getWaveClearBonus();
+            wavePause = wave.getNextWaveDelay();
+            spawnTimer = 0;
         }
+    }
+
+    private WaveDefinition currentWave() {
+        return config.getWave(waveIndex);
     }
 
     private Tower findTower(int col, int row) {
@@ -235,10 +272,30 @@ public final class GameState {
     }
 
     public int getWave() {
-        return wave;
+        return waveIndex + 1;
+    }
+
+    public int getMaxWave() {
+        return config.getWaveCount();
+    }
+
+    public int getEnemiesSpawnedInWave() {
+        return enemiesSpawnedInWave;
+    }
+
+    public int getWaveEnemyCount() {
+        return currentWave().getTotalEnemyCount();
     }
 
     public boolean isGameOver() {
         return gameOver;
+    }
+
+    public boolean isWon() {
+        return won;
+    }
+
+    public boolean isPaused() {
+        return paused;
     }
 }
