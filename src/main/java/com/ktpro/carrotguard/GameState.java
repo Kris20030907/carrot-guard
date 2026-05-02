@@ -11,6 +11,7 @@ public final class GameState {
     private final List<Obstacle> obstacles = new ArrayList<>();
     private final List<Tower> towers = new ArrayList<>();
     private final List<Projectile> projectiles = new ArrayList<>();
+    private final List<HitEffect> hitEffects = new ArrayList<>();
 
     private Tower selectedTower;
     private int selectedBuildCol = -1;
@@ -38,6 +39,7 @@ public final class GameState {
         updateEnemies(deltaSeconds);
         updateTowers(deltaSeconds);
         updateProjectiles(deltaSeconds);
+        updateHitEffects(deltaSeconds);
         checkWaveFinished();
     }
 
@@ -115,6 +117,7 @@ public final class GameState {
         resetObstacles();
         towers.clear();
         projectiles.clear();
+        hitEffects.clear();
         selectedTower = null;
         clearSelectedBuildTile();
         coins = config.getStartingCoins();
@@ -236,17 +239,30 @@ public final class GameState {
     private void applyProjectileHit(Projectile projectile) {
         TowerType type = projectile.getTowerType();
         Target target = projectile.getTarget();
+        hitEffects.add(new HitEffect(target.getX(), target.getY(), 18, type));
         target.damage(projectile.getDamage());
         if (target instanceof Enemy enemyTarget && type.hasSlowEffect()) {
             enemyTarget.applySlow(type.getSlowFactor(), type.getSlowDuration());
         }
         if (target instanceof Enemy enemyTarget && type.hasSplashEffect()) {
             double splashDamage = projectile.getDamage() * 0.65;
+            hitEffects.add(new HitEffect(enemyTarget.getX(), enemyTarget.getY(), type.getSplashRadius(), type));
             for (Enemy enemy : enemies) {
                 if (enemy != enemyTarget && !enemy.isDead() && !enemy.hasReachedGoal()
                         && enemy.distanceTo(enemyTarget.getX(), enemyTarget.getY()) <= type.getSplashRadius()) {
                     enemy.damage(splashDamage);
                 }
+            }
+        }
+    }
+
+    private void updateHitEffects(double deltaSeconds) {
+        Iterator<HitEffect> iterator = hitEffects.iterator();
+        while (iterator.hasNext()) {
+            HitEffect effect = iterator.next();
+            effect.update(deltaSeconds);
+            if (effect.isExpired()) {
+                iterator.remove();
             }
         }
     }
@@ -344,6 +360,10 @@ public final class GameState {
 
     public List<Projectile> getProjectiles() {
         return projectiles;
+    }
+
+    public List<HitEffect> getHitEffects() {
+        return hitEffects;
     }
 
     public Tower getSelectedTower() {

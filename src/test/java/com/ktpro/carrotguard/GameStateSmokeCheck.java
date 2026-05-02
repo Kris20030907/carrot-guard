@@ -69,6 +69,7 @@ public final class GameStateSmokeCheck {
         require(tower.getDamage() > baseDamage, "damage upgrade should increase damage");
         require(tower.getFireInterval() < baseInterval, "speed upgrade should lower fire interval");
         require(tower.getRange() > baseRange, "range upgrade should increase range");
+        require(tower.getUpgradePulse() > 0, "tower upgrade should create visual pulse");
     }
 
     private static void verifyTowerUpgradeFlow() {

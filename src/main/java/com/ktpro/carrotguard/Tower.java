@@ -14,6 +14,7 @@ public final class Tower {
     private int speedLevel;
     private int rangeLevel;
     private double cooldown;
+    private double upgradePulse;
 
     public Tower(int col, int row, TowerType type) {
         this.type = type;
@@ -25,6 +26,7 @@ public final class Tower {
 
     public void update(double deltaSeconds) {
         cooldown = Math.max(0, cooldown - deltaSeconds);
+        upgradePulse = Math.max(0, upgradePulse - deltaSeconds);
     }
 
     public Enemy findTarget(List<Enemy> enemies) {
@@ -81,6 +83,7 @@ public final class Tower {
             case SPEED -> speedLevel++;
             case RANGE -> rangeLevel++;
         }
+        upgradePulse = 0.55;
     }
 
     public int getUpgradeCost(TowerUpgradeType upgradeType) {
@@ -134,5 +137,9 @@ public final class Tower {
             case SPEED -> speedLevel;
             case RANGE -> rangeLevel;
         };
+    }
+
+    public double getUpgradePulse() {
+        return upgradePulse;
     }
 }

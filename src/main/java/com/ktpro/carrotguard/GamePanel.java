@@ -372,23 +372,23 @@ public final class GamePanel extends JPanel implements Runnable {
     }
 
     private Rectangle buildOptionRect(int index, int count) {
-        Point origin = contextMenuOrigin(state.getSelectedBuildCol(), state.getSelectedBuildRow(), count * 78 + (count - 1) * 6);
+        Point origin = contextMenuOrigin(state.getSelectedBuildCol(), state.getSelectedBuildRow(), count * 78 + (count - 1) * 6, 32);
         return new Rectangle(origin.x + index * 84, origin.y, 78, 32);
     }
 
     private Rectangle upgradeOptionRect(int index, int count) {
         Tower tower = state.getSelectedTower();
-        Point origin = contextMenuOrigin(tower.getCol(), tower.getRow(), count * 70 + (count - 1) * 6);
+        Point origin = contextMenuOrigin(tower.getCol(), tower.getRow(), count * 70 + (count - 1) * 6, 70);
         return new Rectangle(origin.x + index * 76, origin.y, 70, 32);
     }
 
     private Rectangle sellOptionRect() {
         Tower tower = state.getSelectedTower();
-        Point origin = contextMenuOrigin(tower.getCol(), tower.getRow(), 72);
+        Point origin = contextMenuOrigin(tower.getCol(), tower.getRow(), 72, 70);
         return new Rectangle(origin.x, origin.y + 38, 72, 32);
     }
 
-    private Point contextMenuOrigin(int col, int row, int width) {
+    private Point contextMenuOrigin(int col, int row, int width, int height) {
         int tileX = col * TILE_SIZE;
         int tileY = HUD_HEIGHT + row * TILE_SIZE;
         int x = tileX + TILE_SIZE + 8;
@@ -398,10 +398,10 @@ public final class GamePanel extends JPanel implements Runnable {
         x = Math.max(8, Math.min(x, WIDTH - width - 8));
 
         int y = tileY + 8;
-        if (y + 32 > HEIGHT - 8) {
-            y = tileY - 40;
+        if (y + height > HEIGHT - 8) {
+            y = tileY - height - 8;
         }
-        y = Math.max(HUD_HEIGHT + 8, Math.min(y, HEIGHT - 40));
+        y = Math.max(HUD_HEIGHT + 8, Math.min(y, HEIGHT - height - 8));
         return new Point(x, y);
     }
 
@@ -430,6 +430,13 @@ public final class GamePanel extends JPanel implements Runnable {
             if (tower == state.getSelectedTower()) {
                 drawRange(g, centerX, centerY, (int) tower.getRange(), new Color(255, 246, 164, 90), new Color(255, 246, 164));
             }
+            if (tower.getUpgradePulse() > 0) {
+                float pulse = (float) Math.min(1.0, tower.getUpgradePulse() / 0.55);
+                int glow = 28 + (int) ((1.0f - pulse) * 14);
+                g.setColor(new Color(255, 248, 164, (int) (150 * pulse)));
+                g.setStroke(new BasicStroke(3f));
+                g.drawOval(centerX - glow, centerY - glow, glow * 2, glow * 2);
+            }
 
             g.setColor(tower == state.getSelectedTower() ? tower.getType().getBodyColor().brighter() : tower.getType().getBodyColor());
             g.fillOval(centerX - 17, centerY - 17, 34, 34);
@@ -441,10 +448,21 @@ public final class GamePanel extends JPanel implements Runnable {
         }
 
         for (Projectile projectile : state.getProjectiles()) {
+            int size = projectile.getTowerType().hasSplashEffect() ? 13 : 10;
             g.setColor(projectile.getTowerType().getBodyColor().brighter());
-            g.fillOval((int) projectile.getX() - 5, (int) projectile.getY() - 5, 10, 10);
+            g.fillOval((int) projectile.getX() - size / 2, (int) projectile.getY() - size / 2, size, size);
             g.setColor(projectile.getTowerType().getBarrelColor());
-            g.drawOval((int) projectile.getX() - 5, (int) projectile.getY() - 5, 10, 10);
+            g.drawOval((int) projectile.getX() - size / 2, (int) projectile.getY() - size / 2, size, size);
+        }
+
+        for (HitEffect effect : state.getHitEffects()) {
+            double progress = effect.getProgress();
+            int radius = (int) (8 + effect.getRadius() * progress);
+            int alpha = Math.max(0, (int) (155 * (1.0 - progress)));
+            Color effectColor = effect.getTowerType().getBodyColor();
+            g.setColor(new Color(effectColor.getRed(), effectColor.getGreen(), effectColor.getBlue(), alpha));
+            g.setStroke(new BasicStroke(effect.getTowerType().hasSplashEffect() ? 3f : 2f));
+            g.drawOval((int) effect.getX() - radius, (int) effect.getY() - radius, radius * 2, radius * 2);
         }
 
         for (Enemy enemy : state.getEnemies()) {
