@@ -1,30 +1,57 @@
 package com.ktpro.carrotguard;
 
+import java.awt.Point;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 public final class LevelConfig {
+    private static final String FIRST_LEVEL_RESOURCE = "/levels/level1.properties";
+
     private final GamePath path;
     private final int startingCoins;
     private final int startingLives;
+    private final List<ObstacleDefinition> obstacles;
     private final List<WaveDefinition> waves;
 
     private LevelConfig(
             GamePath path,
             int startingCoins,
             int startingLives,
+            List<ObstacleDefinition> obstacles,
             List<WaveDefinition> waves
     ) {
         this.path = path;
         this.startingCoins = startingCoins;
         this.startingLives = startingLives;
+        this.obstacles = List.copyOf(obstacles);
         this.waves = List.copyOf(waves);
     }
 
     public static LevelConfig firstLevel() {
+        try {
+            return loadFromResource(FIRST_LEVEL_RESOURCE);
+        } catch (IllegalArgumentException e) {
+            System.err.println("Could not load " + FIRST_LEVEL_RESOURCE + ": " + e.getMessage());
+            return defaultFirstLevel();
+        }
+    }
+
+    static LevelConfig defaultFirstLevel() {
         return new LevelConfig(
                 GamePath.defaultPath(),
                 160,
                 10,
+                List.of(
+                        new ObstacleDefinition(ObstacleKind.CRATE, 2, 2),
+                        new ObstacleDefinition(ObstacleKind.ROCK, 8, 3),
+                        new ObstacleDefinition(ObstacleKind.CRATE, 12, 3),
+                        new ObstacleDefinition(ObstacleKind.ROCK, 3, 7),
+                        new ObstacleDefinition(ObstacleKind.CRATE, 7, 8),
+                        new ObstacleDefinition(ObstacleKind.ROCK, 11, 8)
+                ),
                 List.of(
                         WaveDefinition.of(0.82, 2.0, 20,
                                 new WaveEntry(EnemyType.NORMAL, 8)),
@@ -49,6 +76,138 @@ public final class LevelConfig {
         );
     }
 
+    static LevelConfig loadFromResource(String resourcePath) {
+        Properties properties = new Properties();
+        try (InputStream input = LevelConfig.class.getResourceAsStream(resourcePath)) {
+            if (input == null) {
+                throw new IllegalArgumentException("resource not found");
+            }
+            properties.load(input);
+        } catch (IOException e) {
+            throw new IllegalArgumentException("could not read resource", e);
+        }
+
+        int startingCoins = parseInt(properties, "startingCoins");
+        int startingLives = parseInt(properties, "startingLives");
+        GamePath path = GamePath.fromTiles(parsePath(requireValue(properties, "path")));
+        List<ObstacleDefinition> obstacles = parseObstacles(requireValue(properties, "obstacles"));
+        List<WaveDefinition> waves = parseWaves(properties);
+        return new LevelConfig(path, startingCoins, startingLives, obstacles, waves);
+    }
+
+    private static int parseInt(Properties properties, String key) {
+        String value = requireValue(properties, key);
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException(key + " must be an integer", e);
+        }
+    }
+
+    private static String requireValue(Properties properties, String key) {
+        String value = properties.getProperty(key);
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(key + " is required");
+        }
+        return value.trim();
+    }
+
+    private static List<Point> parsePath(String value) {
+        List<Point> tiles = new ArrayList<>();
+        for (String token : value.split(";")) {
+            String[] parts = token.trim().split(",");
+            if (parts.length != 2) {
+                throw new IllegalArgumentException("path tile must be col,row: " + token);
+            }
+            tiles.add(new Point(parseNumber(parts[0], "path col"), parseNumber(parts[1], "path row")));
+        }
+        return tiles;
+    }
+
+    private static List<ObstacleDefinition> parseObstacles(String value) {
+        List<ObstacleDefinition> definitions = new ArrayList<>();
+        for (String token : value.split(";")) {
+            String trimmed = token.trim();
+            if (trimmed.isEmpty()) {
+                continue;
+            }
+            String[] kindAndPosition = trimmed.split(":");
+            if (kindAndPosition.length != 2) {
+                throw new IllegalArgumentException("obstacle must be KIND:col,row: " + token);
+            }
+            ObstacleKind kind = parseEnum(ObstacleKind.class, kindAndPosition[0], "obstacle kind");
+            String[] position = kindAndPosition[1].split(",");
+            if (position.length != 2) {
+                throw new IllegalArgumentException("obstacle position must be col,row: " + token);
+            }
+            definitions.add(new ObstacleDefinition(
+                    kind,
+                    parseNumber(position[0], "obstacle col"),
+                    parseNumber(position[1], "obstacle row")));
+        }
+        return definitions;
+    }
+
+    private static List<WaveDefinition> parseWaves(Properties properties) {
+        List<WaveDefinition> waves = new ArrayList<>();
+        for (int index = 1; ; index++) {
+            String value = properties.getProperty("wave." + index);
+            if (value == null) {
+                break;
+            }
+            waves.add(parseWave(value));
+        }
+        if (waves.isEmpty()) {
+            throw new IllegalArgumentException("at least one wave is required");
+        }
+        return waves;
+    }
+
+    private static WaveDefinition parseWave(String value) {
+        String[] parts = value.split(",", 4);
+        if (parts.length != 4) {
+            throw new IllegalArgumentException("wave must be spawnInterval,nextWaveDelay,clearBonus,entries: " + value);
+        }
+        double spawnInterval = parseDouble(parts[0], "wave spawn interval");
+        double nextWaveDelay = parseDouble(parts[1], "wave next delay");
+        int clearBonus = parseNumber(parts[2], "wave clear bonus");
+        List<WaveEntry> entries = new ArrayList<>();
+        for (String token : parts[3].split(";")) {
+            String[] entry = token.trim().split(":");
+            if (entry.length != 2) {
+                throw new IllegalArgumentException("wave entry must be ENEMY:count: " + token);
+            }
+            entries.add(new WaveEntry(
+                    parseEnum(EnemyType.class, entry[0], "enemy type"),
+                    parseNumber(entry[1], "enemy count")));
+        }
+        return WaveDefinition.of(spawnInterval, nextWaveDelay, clearBonus, entries.toArray(WaveEntry[]::new));
+    }
+
+    private static int parseNumber(String value, String label) {
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException(label + " must be an integer: " + value, e);
+        }
+    }
+
+    private static double parseDouble(String value, String label) {
+        try {
+            return Double.parseDouble(value.trim());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException(label + " must be a number: " + value, e);
+        }
+    }
+
+    private static <T extends Enum<T>> T parseEnum(Class<T> type, String value, String label) {
+        try {
+            return Enum.valueOf(type, value.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("unknown " + label + ": " + value, e);
+        }
+    }
+
     public GamePath getPath() {
         return path;
     }
@@ -59,6 +218,10 @@ public final class LevelConfig {
 
     public int getStartingLives() {
         return startingLives;
+    }
+
+    public List<ObstacleDefinition> getObstacles() {
+        return obstacles;
     }
 
     public WaveDefinition getWave(int index) {

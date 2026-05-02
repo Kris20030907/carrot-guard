@@ -10,6 +10,7 @@ public final class GameStateSmokeCheck {
         require(path.containsTile(5, 4), "default path should include the first turn connector");
         require(path.containsTile(10, 2), "default path should include the second turn connector");
         require(path.containsTile(14, 6), "default path should include the last turn connector");
+        verifyLevelConfigLoaded();
 
         GameState state = new GameState();
         require(state.canBuildTowerAt(1, 2, TowerType.BASIC), "empty grass tile should be buildable");
@@ -57,6 +58,16 @@ public final class GameStateSmokeCheck {
         if (!condition) {
             throw new IllegalStateException(message);
         }
+    }
+
+    private static void verifyLevelConfigLoaded() {
+        LevelConfig config = LevelConfig.firstLevel();
+        require(config.getStartingCoins() == 160, "resource level should define starting coins");
+        require(config.getStartingLives() == 10, "resource level should define starting lives");
+        require(config.getWaveCount() == 6, "resource level should define six waves");
+        require(config.getObstacles().size() == 6, "resource level should define six obstacles");
+        require(config.getPath().hasOnlyOrthogonalSteps(), "resource path should be orthogonal");
+        require(config.getPath().containsTile(5, 4), "resource path should include the first turn connector");
     }
 
     private static void verifyTowerUpgradeStats() {

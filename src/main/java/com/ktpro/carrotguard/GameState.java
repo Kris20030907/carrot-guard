@@ -329,12 +329,9 @@ public final class GameState {
 
     private void resetObstacles() {
         obstacles.clear();
-        obstacles.add(Obstacle.crate(2, 2));
-        obstacles.add(Obstacle.rock(8, 3));
-        obstacles.add(Obstacle.crate(12, 3));
-        obstacles.add(Obstacle.rock(3, 7));
-        obstacles.add(Obstacle.crate(7, 8));
-        obstacles.add(Obstacle.rock(11, 8));
+        for (ObstacleDefinition definition : config.getObstacles()) {
+            obstacles.add(definition.createObstacle());
+        }
     }
 
     private void clearSelectedBuildTile() {

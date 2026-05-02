@@ -10,13 +10,31 @@ public final class GamePath {
     private final List<Point> waypoints;
 
     private GamePath(List<Point> tiles) {
-        this.tiles = List.copyOf(tiles);
+        if (tiles.size() < 3) {
+            throw new IllegalArgumentException("path must include entrance, goal, and exit tiles");
+        }
+        this.tiles = copyTiles(tiles);
         this.waypoints = new ArrayList<>();
-        for (Point tile : tiles) {
+        for (Point tile : this.tiles) {
             int x = tile.x * GamePanel.TILE_SIZE + GamePanel.TILE_SIZE / 2;
             int y = tile.y * GamePanel.TILE_SIZE + GamePanel.TILE_SIZE / 2 + GamePanel.HUD_HEIGHT;
             waypoints.add(new Point(x, y));
         }
+        if (!hasOnlyOrthogonalSteps()) {
+            throw new IllegalArgumentException("path must move one orthogonal tile at a time");
+        }
+    }
+
+    private static List<Point> copyTiles(List<Point> tiles) {
+        List<Point> copy = new ArrayList<>();
+        for (Point tile : tiles) {
+            copy.add(new Point(tile));
+        }
+        return List.copyOf(copy);
+    }
+
+    public static GamePath fromTiles(List<Point> tiles) {
+        return new GamePath(tiles);
     }
 
     public static GamePath defaultPath() {

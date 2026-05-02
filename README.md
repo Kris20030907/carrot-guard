@@ -11,6 +11,7 @@
 - 点击空地后可选择建造普通、减速、范围三种炮塔
 - 普通、快速、重甲三种怪物
 - 明确配置的 6 波关卡流程
+- 关卡数据从 `src/main/resources/levels/level1.properties` 加载，并保留内置 fallback
 - 障碍物占用格子，清除后奖励金币并释放建造位置
 - 鼠标悬停地图时显示建造预览和攻击范围
 - 点击空地选择建造位置，再点击格子旁的炮塔按钮完成建造
@@ -19,7 +20,7 @@
 - 炮塔自动索敌并发射子弹
 - 炮塔升级、投射物命中和范围溅射带有轻量视觉反馈
 - 金币、生命值、波次、暂停、重开、胜利和失败状态
-- 关卡基础参数集中在 `LevelConfig`
+- 关卡基础参数由 `LevelConfig` 加载和校验
 
 ## 运行
 
@@ -33,6 +34,7 @@ java -jar target/carrot-guard-0.1.0-SNAPSHOT.jar
 ```bash
 mkdir -p out
 javac -d out $(find src/main/java -name "*.java")
+cp -R src/main/resources/* out/
 java -cp out com.ktpro.carrotguard.Main
 ```
 
@@ -43,6 +45,15 @@ mvn -q -DskipTests package
 javac -cp target/classes -d /tmp/carrot-guard-test-out $(find src/test/java -name "*.java")
 java -cp target/classes:/tmp/carrot-guard-test-out com.ktpro.carrotguard.GameStateSmokeCheck
 ```
+
+## 关卡配置
+
+当前第一关配置在 `src/main/resources/levels/level1.properties`：
+
+- `startingCoins` / `startingLives`：初始金币和生命
+- `path`：敌人路径格子，格式为 `col,row;col,row`
+- `obstacles`：障碍物，格式为 `KIND:col,row`
+- `wave.N`：波次，格式为 `spawnInterval,nextWaveDelay,clearBonus,ENEMY:count;ENEMY:count`
 
 ## 操作
 
@@ -63,6 +74,5 @@ java -cp target/classes:/tmp/carrot-guard-test-out com.ktpro.carrotguard.GameSta
 
 ## 近期路线
 
-- 增加关卡配置文件
 - 增加地图障碍物、障碍物奖励和更多关卡
 - 加入音效、贴图和主菜单
