@@ -8,6 +8,7 @@ public final class GameState {
     private final LevelConfig config = LevelConfig.firstLevel();
     private final GamePath path = config.getPath();
     private final List<Enemy> enemies = new ArrayList<>();
+    private final List<Obstacle> obstacles = new ArrayList<>();
     private final List<Tower> towers = new ArrayList<>();
     private final List<Projectile> projectiles = new ArrayList<>();
 
@@ -22,6 +23,10 @@ public final class GameState {
     private boolean gameOver;
     private boolean won;
     private boolean paused;
+
+    public GameState() {
+        resetObstacles();
+    }
 
     public void update(double deltaSeconds) {
         if (gameOver || won || paused) {
@@ -63,6 +68,7 @@ public final class GameState {
                 && row < GamePanel.ROWS
                 && coins >= selectedTowerType.getCost()
                 && !path.containsTile(col, row)
+                && findObstacle(col, row) == null
                 && findTower(col, row) == null;
     }
 
@@ -71,6 +77,13 @@ public final class GameState {
             return null;
         }
         return findTower(col, row);
+    }
+
+    public Obstacle getObstacleAt(int col, int row) {
+        if (col < 0 || row < 0 || col >= GamePanel.COLS || row >= GamePanel.ROWS) {
+            return null;
+        }
+        return findObstacle(col, row);
     }
 
     public void selectTowerType(TowerType type) {
@@ -85,6 +98,7 @@ public final class GameState {
 
     public void restart() {
         enemies.clear();
+        resetObstacles();
         towers.clear();
         projectiles.clear();
         selectedTower = null;
@@ -170,6 +184,11 @@ public final class GameState {
             Enemy target = tower.findTarget(enemies);
             if (target != null && tower.canFire()) {
                 projectiles.add(tower.fireAt(target));
+                continue;
+            }
+            Obstacle obstacle = tower.findObstacleTarget(obstacles);
+            if (obstacle != null && tower.canFire()) {
+                projectiles.add(tower.fireAt(obstacle));
             }
         }
     }
@@ -183,7 +202,7 @@ public final class GameState {
                 iterator.remove();
                 continue;
             }
-            Enemy target = projectile.getTarget();
+            Target target = projectile.getTarget();
             if (target.isDead()) {
                 iterator.remove();
                 continue;
@@ -192,22 +211,23 @@ public final class GameState {
                 applyProjectileHit(projectile);
                 iterator.remove();
                 collectDefeatedEnemies();
+                collectClearedObstacles();
             }
         }
     }
 
     private void applyProjectileHit(Projectile projectile) {
         TowerType type = projectile.getTowerType();
-        Enemy target = projectile.getTarget();
+        Target target = projectile.getTarget();
         target.damage(projectile.getDamage());
-        if (type.hasSlowEffect()) {
-            target.applySlow(type.getSlowFactor(), type.getSlowDuration());
+        if (target instanceof Enemy enemyTarget && type.hasSlowEffect()) {
+            enemyTarget.applySlow(type.getSlowFactor(), type.getSlowDuration());
         }
-        if (type.hasSplashEffect()) {
+        if (target instanceof Enemy enemyTarget && type.hasSplashEffect()) {
             double splashDamage = projectile.getDamage() * 0.65;
             for (Enemy enemy : enemies) {
-                if (enemy != target && !enemy.isDead() && !enemy.hasReachedGoal()
-                        && enemy.distanceTo(target.getX(), target.getY()) <= type.getSplashRadius()) {
+                if (enemy != enemyTarget && !enemy.isDead() && !enemy.hasReachedGoal()
+                        && enemy.distanceTo(enemyTarget.getX(), enemyTarget.getY()) <= type.getSplashRadius()) {
                     enemy.damage(splashDamage);
                 }
             }
@@ -221,6 +241,17 @@ public final class GameState {
             if (enemy.isDead()) {
                 iterator.remove();
                 coins += enemy.getReward();
+            }
+        }
+    }
+
+    private void collectClearedObstacles() {
+        Iterator<Obstacle> iterator = obstacles.iterator();
+        while (iterator.hasNext()) {
+            Obstacle obstacle = iterator.next();
+            if (obstacle.isDead()) {
+                iterator.remove();
+                coins += obstacle.getReward();
             }
         }
     }
@@ -254,6 +285,25 @@ public final class GameState {
         return null;
     }
 
+    private Obstacle findObstacle(int col, int row) {
+        for (Obstacle obstacle : obstacles) {
+            if (obstacle.getCol() == col && obstacle.getRow() == row) {
+                return obstacle;
+            }
+        }
+        return null;
+    }
+
+    private void resetObstacles() {
+        obstacles.clear();
+        obstacles.add(Obstacle.crate(2, 2));
+        obstacles.add(Obstacle.rock(8, 3));
+        obstacles.add(Obstacle.crate(12, 3));
+        obstacles.add(Obstacle.rock(3, 7));
+        obstacles.add(Obstacle.crate(7, 8));
+        obstacles.add(Obstacle.rock(11, 8));
+    }
+
     public GamePath getPath() {
         return path;
     }
@@ -264,6 +314,10 @@ public final class GameState {
 
     public List<Tower> getTowers() {
         return towers;
+    }
+
+    public List<Obstacle> getObstacles() {
+        return obstacles;
     }
 
     public List<Projectile> getProjectiles() {

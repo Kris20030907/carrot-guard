@@ -41,11 +41,27 @@ public final class Tower {
         return best;
     }
 
+    public Obstacle findObstacleTarget(List<Obstacle> obstacles) {
+        Obstacle best = null;
+        double bestDistance = Double.MAX_VALUE;
+        for (Obstacle obstacle : obstacles) {
+            if (obstacle.isDead()) {
+                continue;
+            }
+            double distance = obstacle.distanceTo(x, y);
+            if (distance <= getRange() && distance < bestDistance) {
+                best = obstacle;
+                bestDistance = distance;
+            }
+        }
+        return best;
+    }
+
     public boolean canFire() {
         return cooldown <= 0;
     }
 
-    public Projectile fireAt(Enemy target) {
+    public Projectile fireAt(Target target) {
         cooldown = getFireInterval();
         return new Projectile(x, y, target, getDamage(), type, type.getProjectileSpeed());
     }

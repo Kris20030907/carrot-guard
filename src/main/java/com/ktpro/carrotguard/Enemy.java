@@ -2,7 +2,7 @@ package com.ktpro.carrotguard;
 
 import java.awt.Point;
 
-public final class Enemy {
+public final class Enemy implements Target {
     private final GamePath path;
     private final EnemyType type;
     private final double maxHealth;
@@ -63,6 +63,7 @@ public final class Enemy {
         }
     }
 
+    @Override
     public void damage(double amount) {
         health = Math.max(0, health - amount);
     }
@@ -75,22 +76,22 @@ public final class Enemy {
         slowTimer = Math.max(slowTimer, seconds);
     }
 
+    @Override
     public boolean isDead() {
         return health <= 0;
     }
 
+    @Override
     public boolean hasReachedGoal() {
         return reachedGoal;
     }
 
-    public double distanceTo(double targetX, double targetY) {
-        return Math.hypot(x - targetX, y - targetY);
-    }
-
+    @Override
     public double getX() {
         return x;
     }
 
+    @Override
     public double getY() {
         return y;
     }

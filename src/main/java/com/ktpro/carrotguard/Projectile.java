@@ -1,7 +1,7 @@
 package com.ktpro.carrotguard;
 
 public final class Projectile {
-    private final Enemy target;
+    private final Target target;
     private final double damage;
     private final TowerType towerType;
     private final double speed;
@@ -10,7 +10,7 @@ public final class Projectile {
     private double age;
     private boolean expired;
 
-    public Projectile(double x, double y, Enemy target, double damage, TowerType towerType, double speed) {
+    public Projectile(double x, double y, Target target, double damage, TowerType towerType, double speed) {
         this.x = x;
         this.y = y;
         this.target = target;
@@ -47,7 +47,7 @@ public final class Projectile {
         return expired;
     }
 
-    public Enemy getTarget() {
+    public Target getTarget() {
         return target;
     }
 

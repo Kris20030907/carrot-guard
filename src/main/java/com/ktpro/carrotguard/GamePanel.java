@@ -263,11 +263,20 @@ public final class GamePanel extends JPanel implements Runnable {
         int centerX = x + TILE_SIZE / 2;
         int centerY = y + TILE_SIZE / 2;
         Tower hoverTower = state.getTowerAt(hoverCol, hoverRow);
+        Obstacle hoverObstacle = state.getObstacleAt(hoverCol, hoverRow);
 
         if (hoverTower != null) {
             drawRange(g, centerX, centerY, (int) hoverTower.getRange(), new Color(255, 246, 164, 80), new Color(255, 246, 164));
             g.setColor(new Color(255, 246, 164, 80));
             g.fillRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+            return;
+        }
+        if (hoverObstacle != null) {
+            g.setColor(new Color(255, 246, 164, 70));
+            g.fillRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+            g.setColor(new Color(255, 246, 164));
+            g.setStroke(new BasicStroke(2f));
+            g.drawRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
             return;
         }
 
@@ -297,6 +306,23 @@ public final class GamePanel extends JPanel implements Runnable {
     }
 
     private void drawEntities(Graphics2D g) {
+        for (Obstacle obstacle : state.getObstacles()) {
+            int x = (int) obstacle.getX();
+            int y = (int) obstacle.getY();
+            g.setColor(obstacle.getBodyColor());
+            g.fillRoundRect(x - 16, y - 16, 32, 32, 8, 8);
+            g.setColor(obstacle.getBorderColor());
+            g.setStroke(new BasicStroke(3f));
+            g.drawRoundRect(x - 16, y - 16, 32, 32, 8, 8);
+
+            int barWidth = 34;
+            int healthWidth = (int) (barWidth * obstacle.getHealthRatio());
+            g.setColor(new Color(73, 43, 35));
+            g.fillRect(x - barWidth / 2, y - 27, barWidth, 5);
+            g.setColor(new Color(247, 197, 74));
+            g.fillRect(x - barWidth / 2, y - 27, healthWidth, 5);
+        }
+
         for (Tower tower : state.getTowers()) {
             int centerX = tower.getCol() * TILE_SIZE + TILE_SIZE / 2;
             int centerY = HUD_HEIGHT + tower.getRow() * TILE_SIZE + TILE_SIZE / 2;
