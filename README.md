@@ -20,6 +20,7 @@
 - 炮塔自动索敌并发射子弹
 - 炮塔升级、投射物命中和范围溅射带有轻量视觉反馈
 - 金币、生命值、波次、暂停、重开、胜利和失败状态
+- 支持 `0.5x / 1x / 2x / 4x` 游戏速度切换
 - 关卡基础参数由 `LevelConfig` 加载和校验
 
 ## 运行
@@ -64,6 +65,7 @@ java -cp target/classes:/tmp/carrot-guard-test-out com.ktpro.carrotguard.GameSta
 - 顶部 Pause：暂停或继续
 - 顶部 Restart：重开当前关卡
 - 顶部 Next：胜利后进入下一关
+- 顶部倍速按钮：在 `0.5x / 1x / 2x / 4x` 间循环切换
 - 炮塔旁 DMG / SPD / RNG：分别升级伤害、攻速、范围
 - 炮塔旁 Sell：出售选中的炮塔
 - 炮塔信息面板：查看当前数值、下一次升级后的数值变化、费用和出售价值

@@ -14,6 +14,7 @@ public final class GameStateSmokeCheck {
 
         GameState state = new GameState();
         require(state.getLevelNumber() == 1, "new game should start on level one");
+        verifySpeedMultiplierCycle(state);
         require(state.hasNextLevel(), "level one should have a next level available");
         require(!state.advanceToNextLevel(), "next level should require victory");
         require(state.canBuildTowerAt(1, 2, TowerType.BASIC), "empty grass tile should be buildable");
@@ -61,6 +62,20 @@ public final class GameStateSmokeCheck {
         if (!condition) {
             throw new IllegalStateException(message);
         }
+    }
+
+    private static void verifySpeedMultiplierCycle(GameState state) {
+        require(state.getSpeedMultiplier() == 1.0, "default speed should be 1x");
+        require("1x".equals(state.getSpeedLabel()), "default speed label should be 1x");
+        state.cycleSpeedMultiplier();
+        require(state.getSpeedMultiplier() == 2.0, "second speed should be 2x");
+        state.cycleSpeedMultiplier();
+        require(state.getSpeedMultiplier() == 4.0, "third speed should be 4x");
+        state.cycleSpeedMultiplier();
+        require(state.getSpeedMultiplier() == 0.5, "fourth speed should be 0.5x");
+        require("0.5x".equals(state.getSpeedLabel()), "fractional speed label should show 0.5x");
+        state.cycleSpeedMultiplier();
+        require(state.getSpeedMultiplier() == 1.0, "speed should cycle back to 1x");
     }
 
     private static void verifyLevelConfigLoaded() {

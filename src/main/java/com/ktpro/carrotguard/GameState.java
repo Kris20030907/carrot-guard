@@ -5,6 +5,9 @@ import java.util.Iterator;
 import java.util.List;
 
 public final class GameState {
+    private static final double[] SPEED_MULTIPLIERS = { 0.5, 1.0, 2.0, 4.0 };
+    private static final int DEFAULT_SPEED_INDEX = 1;
+
     private final List<Enemy> enemies = new ArrayList<>();
     private final List<Obstacle> obstacles = new ArrayList<>();
     private final List<Tower> towers = new ArrayList<>();
@@ -20,6 +23,7 @@ public final class GameState {
     private int lives;
     private int waveIndex;
     private int enemiesSpawnedInWave;
+    private int speedIndex = DEFAULT_SPEED_INDEX;
     private double spawnTimer;
     private double wavePause;
     private boolean gameOver;
@@ -114,6 +118,10 @@ public final class GameState {
 
     public void restart() {
         resetRunState();
+    }
+
+    public void cycleSpeedMultiplier() {
+        speedIndex = (speedIndex + 1) % SPEED_MULTIPLIERS.length;
     }
 
     public boolean advanceToNextLevel() {
@@ -444,5 +452,14 @@ public final class GameState {
 
     public boolean hasNextLevel() {
         return LevelConfig.hasLevel(config.getLevelNumber() + 1);
+    }
+
+    public double getSpeedMultiplier() {
+        return SPEED_MULTIPLIERS[speedIndex];
+    }
+
+    public String getSpeedLabel() {
+        double speed = getSpeedMultiplier();
+        return speed == Math.floor(speed) ? (int) speed + "x" : speed + "x";
     }
 }

@@ -24,6 +24,7 @@ public final class GamePanel extends JPanel {
     public static final int HEIGHT = ROWS * TILE_SIZE + HUD_HEIGHT;
 
     private final GameState state = new GameState();
+    private final Rectangle speedButton = new Rectangle(380, 14, 78, 28);
     private final Rectangle nextButton = new Rectangle(466, 14, 78, 28);
     private final Rectangle pauseButton = new Rectangle(552, 14, 78, 28);
     private final Rectangle restartButton = new Rectangle(638, 14, 72, 28);
@@ -72,7 +73,9 @@ public final class GamePanel extends JPanel {
             return;
         }
         if (y < HUD_HEIGHT) {
-            if (nextButton.contains(x, y) && state.isWon() && state.hasNextLevel()) {
+            if (speedButton.contains(x, y)) {
+                state.cycleSpeedMultiplier();
+            } else if (nextButton.contains(x, y) && state.isWon() && state.hasNextLevel()) {
                 state.advanceToNextLevel();
             } else if (pauseButton.contains(x, y)) {
                 state.togglePaused();
@@ -145,7 +148,7 @@ public final class GamePanel extends JPanel {
         long now = System.nanoTime();
         double deltaSeconds = (now - lastFrameNanos) / 1_000_000_000.0;
         lastFrameNanos = now;
-        state.update(Math.min(deltaSeconds, 0.05));
+        state.update(Math.min(deltaSeconds, 0.05) * state.getSpeedMultiplier());
         repaint();
     }
 
@@ -179,6 +182,7 @@ public final class GamePanel extends JPanel {
         g.drawString("Wave: " + state.getWave() + "/" + state.getMaxWave(), 350, 62);
 
         drawSelectionHint(g);
+        drawButton(g, speedButton, state.getSpeedLabel(), true);
         drawButton(g, nextButton, "Next", state.isWon() && state.hasNextLevel());
         drawButton(g, pauseButton, state.isPaused() ? "Resume" : "Pause", !state.isGameOver() && !state.isWon());
         drawButton(g, restartButton, "Restart", true);
