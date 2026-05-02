@@ -7,6 +7,7 @@ import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.event.MouseAdapter;
@@ -22,13 +23,8 @@ public final class GamePanel extends JPanel implements Runnable {
     public static final int HEIGHT = ROWS * TILE_SIZE + HUD_HEIGHT;
 
     private final GameState state = new GameState();
-    private final Rectangle basicButton = new Rectangle(300, 14, 72, 28);
-    private final Rectangle slowButton = new Rectangle(378, 14, 72, 28);
-    private final Rectangle splashButton = new Rectangle(456, 14, 78, 28);
     private final Rectangle pauseButton = new Rectangle(552, 14, 78, 28);
     private final Rectangle restartButton = new Rectangle(638, 14, 72, 28);
-    private final Rectangle upgradeButton = new Rectangle(WIDTH - 194, 76, 88, 30);
-    private final Rectangle sellButton = new Rectangle(WIDTH - 96, 76, 76, 30);
     private Thread gameThread;
     private volatile boolean running;
     private int hoverCol = -1;
@@ -66,21 +62,14 @@ public final class GamePanel extends JPanel implements Runnable {
     }
 
     private void handlePrimaryClick(int x, int y) {
+        if (handleContextAction(x, y)) {
+            return;
+        }
         if (y < HUD_HEIGHT) {
-            if (basicButton.contains(x, y)) {
-                state.tryBuildSelectedTower(TowerType.BASIC);
-            } else if (slowButton.contains(x, y)) {
-                state.tryBuildSelectedTower(TowerType.SLOW);
-            } else if (splashButton.contains(x, y)) {
-                state.tryBuildSelectedTower(TowerType.SPLASH);
-            } else if (pauseButton.contains(x, y)) {
+            if (pauseButton.contains(x, y)) {
                 state.togglePaused();
             } else if (restartButton.contains(x, y)) {
                 state.restart();
-            } else if (upgradeButton.contains(x, y)) {
-                state.tryUpgradeSelectedTower();
-            } else if (sellButton.contains(x, y)) {
-                state.sellSelectedTower();
             }
             return;
         }
@@ -88,6 +77,31 @@ public final class GamePanel extends JPanel implements Runnable {
         int col = x / TILE_SIZE;
         int row = (y - HUD_HEIGHT) / TILE_SIZE;
         state.selectMapTile(col, row);
+    }
+
+    private boolean handleContextAction(int x, int y) {
+        if (state.hasSelectedBuildTile()) {
+            TowerType[] types = TowerType.values();
+            for (int i = 0; i < types.length; i++) {
+                if (buildOptionRect(i, types.length).contains(x, y)) {
+                    state.tryBuildSelectedTower(types[i]);
+                    return true;
+                }
+            }
+        }
+
+        Tower selectedTower = state.getSelectedTower();
+        if (selectedTower != null) {
+            if (upgradeOptionRect().contains(x, y)) {
+                state.tryUpgradeSelectedTower();
+                return true;
+            }
+            if (sellOptionRect().contains(x, y)) {
+                state.sellSelectedTower();
+                return true;
+            }
+        }
+        return false;
     }
 
     private void updateHoverTile(int x, int y) {
@@ -146,6 +160,7 @@ public final class GamePanel extends JPanel implements Runnable {
         drawMap(g);
         drawBuildPreview(g);
         drawEntities(g);
+        drawContextMenu(g);
         drawOverlay(g);
         g.dispose();
     }
@@ -163,68 +178,27 @@ public final class GamePanel extends JPanel implements Runnable {
         g.drawString("Lives: " + state.getLives(), 140, 62);
         g.drawString("Wave: " + state.getWave() + "/" + state.getMaxWave(), 250, 62);
 
-        drawBuildButtons(g);
+        drawSelectionHint(g);
         drawButton(g, pauseButton, state.isPaused() ? "Resume" : "Pause", !state.isGameOver() && !state.isWon());
         drawButton(g, restartButton, "Restart", true);
-
-        drawTowerActions(g);
     }
 
-    private void drawBuildButtons(Graphics2D g) {
-        drawBuildButton(g, basicButton, TowerType.BASIC);
-        drawBuildButton(g, slowButton, TowerType.SLOW);
-        drawBuildButton(g, splashButton, TowerType.SPLASH);
-
+    private void drawSelectionHint(Graphics2D g) {
         g.setColor(new Color(255, 250, 235));
         g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
         String progress = state.getEnemiesSpawnedInWave() + "/" + state.getWaveEnemyCount();
+        Tower selectedTower = state.getSelectedTower();
         if (state.hasSelectedBuildTile()) {
             g.drawString("Build at: " + (state.getSelectedBuildCol() + 1) + "," + (state.getSelectedBuildRow() + 1), 330, 62);
+        } else if (selectedTower != null) {
+            String text = selectedTower.getType().getDisplayName() + " L" + selectedTower.getLevel()
+                    + "  DMG " + (int) selectedTower.getDamage()
+                    + "  RNG " + (int) selectedTower.getRange();
+            g.drawString(text, 20, 96);
         } else {
             g.drawString("Build: select a grass tile", 330, 62);
         }
         g.drawString("Enemies: " + progress, 500, 62);
-    }
-
-    private void drawBuildButton(Graphics2D g, Rectangle rect, TowerType type) {
-        boolean hasTile = state.hasSelectedBuildTile();
-        boolean enabled = state.canBuildSelectedTower(type);
-        if (enabled) {
-            g.setColor(new Color(247, 216, 112));
-        } else if (hasTile) {
-            g.setColor(new Color(157, 82, 76));
-        } else {
-            g.setColor(new Color(82, 105, 86));
-        }
-        g.fillRoundRect(rect.x, rect.y, rect.width, rect.height, 8, 8);
-        g.setColor(type.getBodyColor());
-        g.fillOval(rect.x + 7, rect.y + 7, 14, 14);
-        g.setColor(enabled ? new Color(61, 55, 39) : new Color(236, 240, 224));
-        g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 11));
-        g.drawString(type.getDisplayName(), rect.x + 25, rect.y + 14);
-        g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 10));
-        g.drawString(String.valueOf(type.getCost()), rect.x + 25, rect.y + 25);
-    }
-
-    private void drawTowerActions(Graphics2D g) {
-        Tower selectedTower = state.getSelectedTower();
-        boolean hasSelection = selectedTower != null;
-
-        g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
-        if (hasSelection) {
-            String text = selectedTower.getType().getDisplayName() + " L" + selectedTower.getLevel()
-                    + "  DMG " + (int) selectedTower.getDamage()
-                    + "  RNG " + (int) selectedTower.getRange();
-            g.setColor(new Color(255, 250, 235));
-            g.drawString(text, 20, 96);
-        }
-
-        drawButton(g, upgradeButton,
-                hasSelection && selectedTower.canUpgrade() ? "Upgrade " + selectedTower.getUpgradeCost() : "Max/None",
-                hasSelection && selectedTower.canUpgrade() && state.getCoins() >= selectedTower.getUpgradeCost());
-        drawButton(g, sellButton,
-                hasSelection ? "Sell " + selectedTower.getSellValue() : "Sell",
-                hasSelection);
     }
 
     private void drawButton(Graphics2D g, Rectangle rect, String label, boolean enabled) {
@@ -344,6 +318,80 @@ public final class GamePanel extends JPanel implements Runnable {
             }
         }
         return false;
+    }
+
+    private void drawContextMenu(Graphics2D g) {
+        if (state.hasSelectedBuildTile()) {
+            TowerType[] types = TowerType.values();
+            for (int i = 0; i < types.length; i++) {
+                TowerType type = types[i];
+                drawContextButton(g, buildOptionRect(i, types.length), type.getDisplayName(), String.valueOf(type.getCost()),
+                        state.canBuildSelectedTower(type), type.getBodyColor());
+            }
+            return;
+        }
+
+        Tower selectedTower = state.getSelectedTower();
+        if (selectedTower == null) {
+            return;
+        }
+
+        boolean canUpgrade = selectedTower.canUpgrade();
+        boolean canAffordUpgrade = canUpgrade && state.getCoins() >= selectedTower.getUpgradeCost();
+        drawContextButton(g, upgradeOptionRect(),
+                canUpgrade ? "Upgrade" : "Max",
+                canUpgrade ? String.valueOf(selectedTower.getUpgradeCost()) : "",
+                canAffordUpgrade,
+                selectedTower.getType().getBodyColor());
+        drawContextButton(g, sellOptionRect(), "Sell", String.valueOf(selectedTower.getSellValue()), true, new Color(238, 197, 92));
+    }
+
+    private void drawContextButton(Graphics2D g, Rectangle rect, String label, String detail, boolean enabled, Color accent) {
+        g.setColor(enabled ? new Color(247, 216, 112) : new Color(157, 82, 76));
+        g.fillRoundRect(rect.x, rect.y, rect.width, rect.height, 8, 8);
+        g.setColor(accent);
+        g.fillOval(rect.x + 7, rect.y + 8, 14, 14);
+        g.setColor(enabled ? new Color(61, 55, 39) : new Color(236, 240, 224));
+        g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 11));
+        g.drawString(label, rect.x + 25, rect.y + 14);
+        if (!detail.isEmpty()) {
+            g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 10));
+            g.drawString(detail, rect.x + 25, rect.y + 26);
+        }
+    }
+
+    private Rectangle buildOptionRect(int index, int count) {
+        Point origin = contextMenuOrigin(state.getSelectedBuildCol(), state.getSelectedBuildRow(), count * 78 + (count - 1) * 6);
+        return new Rectangle(origin.x + index * 84, origin.y, 78, 32);
+    }
+
+    private Rectangle upgradeOptionRect() {
+        Tower tower = state.getSelectedTower();
+        Point origin = contextMenuOrigin(tower.getCol(), tower.getRow(), 174);
+        return new Rectangle(origin.x, origin.y, 96, 32);
+    }
+
+    private Rectangle sellOptionRect() {
+        Tower tower = state.getSelectedTower();
+        Point origin = contextMenuOrigin(tower.getCol(), tower.getRow(), 174);
+        return new Rectangle(origin.x + 102, origin.y, 72, 32);
+    }
+
+    private Point contextMenuOrigin(int col, int row, int width) {
+        int tileX = col * TILE_SIZE;
+        int tileY = HUD_HEIGHT + row * TILE_SIZE;
+        int x = tileX + TILE_SIZE + 8;
+        if (x + width > WIDTH - 8) {
+            x = tileX - width - 8;
+        }
+        x = Math.max(8, Math.min(x, WIDTH - width - 8));
+
+        int y = tileY + 8;
+        if (y + 32 > HEIGHT - 8) {
+            y = tileY - 40;
+        }
+        y = Math.max(HUD_HEIGHT + 8, Math.min(y, HEIGHT - 40));
+        return new Point(x, y);
     }
 
     private void drawEntities(Graphics2D g) {
