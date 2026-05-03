@@ -26,6 +26,9 @@ public final class GameState {
     private int waveIndex;
     private int enemiesSpawnedInWave;
     private int speedIndex = DEFAULT_SPEED_INDEX;
+    private int leakedEnemies;
+    private int clearedObstacles;
+    private double elapsedSeconds;
     private double spawnTimer;
     private double wavePause;
     private boolean gameOver;
@@ -42,6 +45,7 @@ public final class GameState {
             return;
         }
 
+        elapsedSeconds += deltaSeconds;
         updateHitEffects(deltaSeconds);
         updateFloatingTexts(deltaSeconds);
         spawnEnemies(deltaSeconds);
@@ -165,6 +169,9 @@ public final class GameState {
         waveIndex = 0;
         enemiesSpawnedInWave = 0;
         speedIndex = DEFAULT_SPEED_INDEX;
+        leakedEnemies = 0;
+        clearedObstacles = 0;
+        elapsedSeconds = 0;
         spawnTimer = 0;
         wavePause = 0;
         gameOver = false;
@@ -231,6 +238,7 @@ public final class GameState {
             enemy.update(deltaSeconds);
             if (enemy.hasReachedGoal()) {
                 iterator.remove();
+                leakedEnemies++;
                 int damage = enemy.getLifeDamage();
                 lives -= damage;
                 addCarrotDamageFeedback(damage);
@@ -345,6 +353,7 @@ public final class GameState {
             Obstacle obstacle = iterator.next();
             if (obstacle.isDead()) {
                 iterator.remove();
+                clearedObstacles++;
                 coins += obstacle.getReward();
             }
         }
@@ -459,6 +468,31 @@ public final class GameState {
 
     public int getLives() {
         return lives;
+    }
+
+    public double getElapsedSeconds() {
+        return elapsedSeconds;
+    }
+
+    public int getLeakedEnemies() {
+        return leakedEnemies;
+    }
+
+    public int getClearedObstacles() {
+        return clearedObstacles;
+    }
+
+    public int getStarRating() {
+        if (!won) {
+            return 0;
+        }
+        if (leakedEnemies == 0 && lives == getMaxLives()) {
+            return 3;
+        }
+        if (getLifeRatio() >= 0.5 && leakedEnemies <= 2) {
+            return 2;
+        }
+        return 1;
     }
 
     public int getMaxLives() {

@@ -687,20 +687,65 @@ public final class GamePanel extends JPanel {
         g.setColor(Color.WHITE);
         g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 38));
         if (state.isWon()) {
-            drawCentered(g, "Victory", HUD_HEIGHT + 220);
+            drawVictorySummary(g);
         } else if (state.isGameOver()) {
             drawCentered(g, "Game Over", HUD_HEIGHT + 220);
-        } else {
-            drawCentered(g, "Paused", HUD_HEIGHT + 220);
-        }
-        g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 18));
-        if (state.isWon() && state.hasNextLevel()) {
-            drawCentered(g, "Use Next to continue or Restart to replay", HUD_HEIGHT + 258);
-        } else if (state.isWon()) {
+            g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 18));
             drawCentered(g, "Use Restart to replay this level", HUD_HEIGHT + 258);
         } else {
+            drawCentered(g, "Paused", HUD_HEIGHT + 220);
+            g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 18));
             drawCentered(g, "Use the top buttons to resume or restart", HUD_HEIGHT + 258);
         }
+    }
+
+    private void drawVictorySummary(Graphics2D g) {
+        int panelWidth = 316;
+        int panelHeight = 184;
+        int panelX = (WIDTH - panelWidth) / 2;
+        int panelY = HUD_HEIGHT + 128;
+
+        drawCentered(g, "Victory", HUD_HEIGHT + 105);
+        g.setColor(new Color(47, 68, 55, 236));
+        g.fillRoundRect(panelX, panelY, panelWidth, panelHeight, 10, 10);
+        g.setColor(new Color(255, 250, 235, 205));
+        g.setStroke(new BasicStroke(2f));
+        g.drawRoundRect(panelX, panelY, panelWidth, panelHeight, 10, 10);
+
+        g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
+        g.setColor(new Color(247, 216, 112));
+        drawCentered(g, "Stars: " + state.getStarRating() + "/3", panelY + 35);
+
+        g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
+        g.setColor(new Color(255, 250, 235));
+        int leftX = panelX + 34;
+        int rightX = panelX + panelWidth - 34;
+        int rowY = panelY + 70;
+        drawResultRow(g, "Time", formatTime(state.getElapsedSeconds()), leftX, rightX, rowY);
+        drawResultRow(g, "HP", state.getLives() + "/" + state.getMaxLives(), leftX, rightX, rowY + 24);
+        drawResultRow(g, "Coins", String.valueOf(state.getCoins()), leftX, rightX, rowY + 48);
+        drawResultRow(g, "Leaks", String.valueOf(state.getLeakedEnemies()), leftX, rightX, rowY + 72);
+        drawResultRow(g, "Obstacles", String.valueOf(state.getClearedObstacles()), leftX, rightX, rowY + 96);
+
+        g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 16));
+        g.setColor(Color.WHITE);
+        if (state.hasNextLevel()) {
+            drawCentered(g, "Use Next to continue or Restart to replay", panelY + panelHeight + 38);
+        } else {
+            drawCentered(g, "Use Restart to replay this level", panelY + panelHeight + 38);
+        }
+    }
+
+    private void drawResultRow(Graphics2D g, String label, String value, int leftX, int rightX, int y) {
+        g.drawString(label, leftX, y);
+        drawRightAligned(g, value, rightX, y);
+    }
+
+    private String formatTime(double seconds) {
+        int totalSeconds = Math.max(0, (int) Math.round(seconds));
+        int minutes = totalSeconds / 60;
+        int remainder = totalSeconds % 60;
+        return String.format("%d:%02d", minutes, remainder);
     }
 
     private void drawCentered(Graphics2D g, String text, int y) {

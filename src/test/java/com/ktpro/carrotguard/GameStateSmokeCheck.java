@@ -14,6 +14,8 @@ public final class GameStateSmokeCheck {
 
         GameState state = new GameState();
         require(state.getLevelNumber() == 1, "new game should start on level one");
+        require(state.getElapsedSeconds() == 0.0, "new run should start with zero elapsed time");
+        require(state.getStarRating() == 0, "unfinished run should not have stars");
         verifySpeedMultiplierCycle(state);
         state.cycleSpeedMultiplier();
         require(state.getSpeedMultiplier() == 2.0, "speed test should move state away from default");
@@ -54,10 +56,14 @@ public final class GameStateSmokeCheck {
             state.update(0.1);
         }
         require(state.getEnemiesSpawnedInWave() > 0, "running state should spawn enemies");
+        require(state.getElapsedSeconds() > 0.0, "running state should track elapsed time");
 
         state.restart();
         require(state.getWave() == 1, "restart should return to wave one");
         require(state.getSpeedMultiplier() == 1.0, "restart should reset speed to 1x");
+        require(state.getElapsedSeconds() == 0.0, "restart should reset elapsed time");
+        require(state.getLeakedEnemies() == 0, "restart should reset leaked enemy count");
+        require(state.getClearedObstacles() == 0, "restart should reset cleared obstacle count");
         require(state.getEnemies().isEmpty(), "restart should clear enemies");
         require(state.getTowers().isEmpty(), "restart should clear towers");
         require(!state.getObstacles().isEmpty(), "restart should restore obstacles");
@@ -167,6 +173,8 @@ public final class GameStateSmokeCheck {
         }
         require(state.isGameOver(), "enough leaked enemies should end the game");
         require(state.getLives() <= 0, "game over from leaks should exhaust lives");
+        require(state.getLeakedEnemies() > 0, "leaked enemies should be counted");
+        require(state.getStarRating() == 0, "failed runs should not report stars");
         require(!state.getFloatingTexts().isEmpty(), "leaked enemies should create carrot damage text");
     }
 }
