@@ -28,6 +28,9 @@ public final class GameState {
     private int speedIndex = DEFAULT_SPEED_INDEX;
     private int leakedEnemies;
     private int clearedObstacles;
+    private int hitEventCount;
+    private int leakEventCount;
+    private int clearedObstacleEventCount;
     private double elapsedSeconds;
     private double spawnTimer;
     private double wavePause;
@@ -175,6 +178,9 @@ public final class GameState {
         speedIndex = DEFAULT_SPEED_INDEX;
         leakedEnemies = 0;
         clearedObstacles = 0;
+        hitEventCount = 0;
+        leakEventCount = 0;
+        clearedObstacleEventCount = 0;
         elapsedSeconds = 0;
         spawnTimer = 0;
         wavePause = 0;
@@ -243,6 +249,7 @@ public final class GameState {
             if (enemy.hasReachedGoal()) {
                 iterator.remove();
                 leakedEnemies++;
+                leakEventCount++;
                 int damage = enemy.getLifeDamage();
                 lives -= damage;
                 addCarrotDamageFeedback(damage);
@@ -312,6 +319,7 @@ public final class GameState {
     private void applyProjectileHit(Projectile projectile) {
         TowerType type = projectile.getTowerType();
         Target target = projectile.getTarget();
+        hitEventCount++;
         hitEffects.add(new HitEffect(target.getX(), target.getY(), 18, type));
         target.damage(projectile.getDamage());
         if (target instanceof Enemy enemyTarget && type.hasSlowEffect()) {
@@ -358,6 +366,7 @@ public final class GameState {
             if (obstacle.isDead()) {
                 iterator.remove();
                 clearedObstacles++;
+                clearedObstacleEventCount++;
                 coins += obstacle.getReward();
             }
         }
@@ -484,6 +493,18 @@ public final class GameState {
 
     public int getClearedObstacles() {
         return clearedObstacles;
+    }
+
+    public int getHitEventCount() {
+        return hitEventCount;
+    }
+
+    public int getLeakEventCount() {
+        return leakEventCount;
+    }
+
+    public int getClearedObstacleEventCount() {
+        return clearedObstacleEventCount;
     }
 
     public int getStarRating() {

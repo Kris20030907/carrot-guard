@@ -31,6 +31,7 @@ public final class GamePanel extends JPanel {
 
     private final GameState state = new GameState();
     private final GameProgress progress;
+    private final SoundEffects soundEffects = new SoundEffects();
     private final List<Integer> levelNumbers = LevelConfig.availableLevelNumbers();
     private final Rectangle menuButton = new Rectangle(294, 14, 78, 28);
     private final Rectangle speedButton = new Rectangle(380, 14, 78, 28);
@@ -43,6 +44,9 @@ public final class GamePanel extends JPanel {
     private int hoverCol = -1;
     private int hoverRow = -1;
     private int hoverLevelIndex = -1;
+    private int observedHitEvents;
+    private int observedLeakEvents;
+    private int observedClearedObstacleEvents;
     private boolean victoryRecorded;
 
     public GamePanel() {
@@ -99,19 +103,26 @@ public final class GamePanel extends JPanel {
         }
         if (y < HUD_HEIGHT) {
             if (menuButton.contains(x, y)) {
+                soundEffects.play(SoundEffect.CLICK);
                 showMenu();
             } else if (speedButton.contains(x, y)) {
+                soundEffects.play(SoundEffect.CLICK);
                 state.cycleSpeedMultiplier();
             } else if (nextButton.contains(x, y) && state.isWon() && state.hasNextLevel()) {
+                soundEffects.play(SoundEffect.CLICK);
                 recordVictoryIfNeeded();
                 if (state.advanceToNextLevel()) {
                     victoryRecorded = false;
+                    syncSoundCounters();
                 }
             } else if (pauseButton.contains(x, y)) {
+                soundEffects.play(SoundEffect.CLICK);
                 state.togglePaused();
             } else if (restartButton.contains(x, y)) {
+                soundEffects.play(SoundEffect.CLICK);
                 state.restart();
                 victoryRecorded = false;
+                syncSoundCounters();
             }
             return;
         }
@@ -125,6 +136,7 @@ public final class GamePanel extends JPanel {
         for (int i = 0; i < levelNumbers.size(); i++) {
             int levelNumber = levelNumbers.get(i);
             if (progress.isUnlocked(levelNumber) && levelCardRect(i, levelNumbers.size()).contains(x, y)) {
+                soundEffects.play(SoundEffect.CLICK);
                 startLevel(levelNumbers.get(i));
                 return;
             }
@@ -136,7 +148,7 @@ public final class GamePanel extends JPanel {
             TowerType[] types = TowerType.values();
             for (int i = 0; i < types.length; i++) {
                 if (buildOptionRect(i, types.length).contains(x, y)) {
-                    state.tryBuildSelectedTower(types[i]);
+                    soundEffects.play(state.tryBuildSelectedTower(types[i]) ? SoundEffect.BUILD : SoundEffect.CLICK);
                     return true;
                 }
             }
@@ -147,12 +159,12 @@ public final class GamePanel extends JPanel {
             TowerUpgradeType[] upgrades = TowerUpgradeType.values();
             for (int i = 0; i < upgrades.length; i++) {
                 if (upgradeOptionRect(i, upgrades.length).contains(x, y)) {
-                    state.tryUpgradeSelectedTower(upgrades[i]);
+                    soundEffects.play(state.tryUpgradeSelectedTower(upgrades[i]) ? SoundEffect.UPGRADE : SoundEffect.CLICK);
                     return true;
                 }
             }
             if (sellOptionRect().contains(x, y)) {
-                state.sellSelectedTower();
+                soundEffects.play(state.sellSelectedTower() ? SoundEffect.SELL : SoundEffect.CLICK);
                 return true;
             }
         }
@@ -209,9 +221,15 @@ public final class GamePanel extends JPanel {
         lastFrameNanos = now;
         if (screen == PanelScreen.PLAYING) {
             boolean wasWon = state.isWon();
+            boolean wasGameOver = state.isGameOver();
             state.update(Math.min(deltaSeconds, 0.05) * state.getSpeedMultiplier());
+            playStateSounds();
             if (!wasWon && state.isWon()) {
                 recordVictoryIfNeeded();
+                soundEffects.play(SoundEffect.VICTORY);
+            }
+            if (!wasGameOver && state.isGameOver()) {
+                soundEffects.play(SoundEffect.DEFEAT);
             }
         }
         repaint();
@@ -242,6 +260,7 @@ public final class GamePanel extends JPanel {
         state.startLevel(levelNumber);
         screen = PanelScreen.PLAYING;
         victoryRecorded = false;
+        syncSoundCounters();
         hoverLevelIndex = -1;
         hoverCol = -1;
         hoverRow = -1;
@@ -275,6 +294,27 @@ public final class GamePanel extends JPanel {
             progress.recordVictory(state.getLevelNumber(), state.getStarRating(), state.hasNextLevel());
             victoryRecorded = true;
         }
+    }
+
+    private void playStateSounds() {
+        if (state.getHitEventCount() > observedHitEvents) {
+            soundEffects.play(SoundEffect.HIT);
+            observedHitEvents = state.getHitEventCount();
+        }
+        if (state.getLeakEventCount() > observedLeakEvents) {
+            soundEffects.play(SoundEffect.LEAK);
+            observedLeakEvents = state.getLeakEventCount();
+        }
+        if (state.getClearedObstacleEventCount() > observedClearedObstacleEvents) {
+            soundEffects.play(SoundEffect.SELL);
+            observedClearedObstacleEvents = state.getClearedObstacleEventCount();
+        }
+    }
+
+    private void syncSoundCounters() {
+        observedHitEvents = state.getHitEventCount();
+        observedLeakEvents = state.getLeakEventCount();
+        observedClearedObstacleEvents = state.getClearedObstacleEventCount();
     }
 
     private void drawMainMenu(Graphics2D g) {

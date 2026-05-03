@@ -10,6 +10,7 @@
 - 轻量 Java2D 美术层，集中绘制地图、萝卜、炮塔、敌人、障碍物和投射物
 - 主菜单和关卡选择界面
 - 本地进度存档，记录关卡解锁状态和每关最高星级
+- 代码生成的轻量音效系统，覆盖按钮、建造、升级、命中、漏怪和结算
 - 敌人沿固定路线移动
 - 点击空地后可选择建造普通、减速、范围三种炮塔
 - 普通、快速、重甲三种怪物
@@ -52,6 +53,7 @@ javac -cp target/classes -d /tmp/carrot-guard-test-out $(find src/test/java -nam
 java -cp target/classes:/tmp/carrot-guard-test-out com.ktpro.carrotguard.GameStateSmokeCheck
 java -cp target/classes:/tmp/carrot-guard-test-out com.ktpro.carrotguard.GamePanelRenderCheck
 java -cp target/classes:/tmp/carrot-guard-test-out com.ktpro.carrotguard.GameProgressSmokeCheck
+java -cp target/classes:/tmp/carrot-guard-test-out com.ktpro.carrotguard.SoundEffectsSmokeCheck
 ```
 
 ## 关卡配置

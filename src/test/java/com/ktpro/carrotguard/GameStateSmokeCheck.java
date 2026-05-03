@@ -16,6 +16,9 @@ public final class GameStateSmokeCheck {
         require(state.getLevelNumber() == 1, "new game should start on level one");
         require(state.getElapsedSeconds() == 0.0, "new run should start with zero elapsed time");
         require(state.getStarRating() == 0, "unfinished run should not have stars");
+        require(state.getHitEventCount() == 0, "new run should start with no hit events");
+        require(state.getLeakEventCount() == 0, "new run should start with no leak events");
+        require(state.getClearedObstacleEventCount() == 0, "new run should start with no obstacle clear events");
         verifySpeedMultiplierCycle(state);
         state.cycleSpeedMultiplier();
         require(state.getSpeedMultiplier() == 2.0, "speed test should move state away from default");
@@ -64,6 +67,9 @@ public final class GameStateSmokeCheck {
         require(state.getElapsedSeconds() == 0.0, "restart should reset elapsed time");
         require(state.getLeakedEnemies() == 0, "restart should reset leaked enemy count");
         require(state.getClearedObstacles() == 0, "restart should reset cleared obstacle count");
+        require(state.getHitEventCount() == 0, "restart should reset hit event count");
+        require(state.getLeakEventCount() == 0, "restart should reset leak event count");
+        require(state.getClearedObstacleEventCount() == 0, "restart should reset obstacle event count");
         require(state.getEnemies().isEmpty(), "restart should clear enemies");
         require(state.getTowers().isEmpty(), "restart should clear towers");
         require(!state.getObstacles().isEmpty(), "restart should restore obstacles");
@@ -190,6 +196,7 @@ public final class GameStateSmokeCheck {
         require(state.isGameOver(), "enough leaked enemies should end the game");
         require(state.getLives() <= 0, "game over from leaks should exhaust lives");
         require(state.getLeakedEnemies() > 0, "leaked enemies should be counted");
+        require(state.getLeakEventCount() > 0, "leaked enemies should emit leak events");
         require(state.getStarRating() == 0, "failed runs should not report stars");
         require(!state.getFloatingTexts().isEmpty(), "leaked enemies should create carrot damage text");
     }
