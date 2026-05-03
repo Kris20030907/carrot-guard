@@ -14,6 +14,7 @@ import java.awt.RenderingHints;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
+import java.util.List;
 
 public final class GamePanel extends JPanel {
     public static final int TILE_SIZE = 48;
@@ -23,15 +24,24 @@ public final class GamePanel extends JPanel {
     public static final int WIDTH = COLS * TILE_SIZE;
     public static final int HEIGHT = ROWS * TILE_SIZE + HUD_HEIGHT;
 
+    private enum PanelScreen {
+        MENU,
+        PLAYING
+    }
+
     private final GameState state = new GameState();
+    private final List<Integer> levelNumbers = LevelConfig.availableLevelNumbers();
+    private final Rectangle menuButton = new Rectangle(294, 14, 78, 28);
     private final Rectangle speedButton = new Rectangle(380, 14, 78, 28);
     private final Rectangle nextButton = new Rectangle(466, 14, 78, 28);
     private final Rectangle pauseButton = new Rectangle(552, 14, 78, 28);
     private final Rectangle restartButton = new Rectangle(638, 14, 72, 28);
     private final Timer gameTimer = new Timer(16, event -> tick());
+    private PanelScreen screen = PanelScreen.MENU;
     private long lastFrameNanos;
     private int hoverCol = -1;
     private int hoverRow = -1;
+    private int hoverLevelIndex = -1;
 
     public GamePanel() {
         setBackground(new Color(247, 239, 218));
@@ -48,6 +58,7 @@ public final class GamePanel extends JPanel {
             public void mouseExited(MouseEvent event) {
                 hoverCol = -1;
                 hoverRow = -1;
+                hoverLevelIndex = -1;
                 repaint();
             }
         });
@@ -65,6 +76,10 @@ public final class GamePanel extends JPanel {
     }
 
     private void handlePrimaryClick(int x, int y) {
+        if (screen == PanelScreen.MENU) {
+            handleMenuClick(x, y);
+            return;
+        }
         if (handleContextAction(x, y)) {
             return;
         }
@@ -76,7 +91,9 @@ public final class GamePanel extends JPanel {
             return;
         }
         if (y < HUD_HEIGHT) {
-            if (speedButton.contains(x, y)) {
+            if (menuButton.contains(x, y)) {
+                showMenu();
+            } else if (speedButton.contains(x, y)) {
                 state.cycleSpeedMultiplier();
             } else if (nextButton.contains(x, y) && state.isWon() && state.hasNextLevel()) {
                 state.advanceToNextLevel();
@@ -91,6 +108,15 @@ public final class GamePanel extends JPanel {
         int col = x / TILE_SIZE;
         int row = (y - HUD_HEIGHT) / TILE_SIZE;
         state.selectMapTile(col, row);
+    }
+
+    private void handleMenuClick(int x, int y) {
+        for (int i = 0; i < levelNumbers.size(); i++) {
+            if (levelCardRect(i, levelNumbers.size()).contains(x, y)) {
+                startLevel(levelNumbers.get(i));
+                return;
+            }
+        }
     }
 
     private boolean handleContextAction(int x, int y) {
@@ -122,6 +148,10 @@ public final class GamePanel extends JPanel {
     }
 
     private void updateHoverTile(int x, int y) {
+        if (screen == PanelScreen.MENU) {
+            updateMenuHover(x, y);
+            return;
+        }
         int nextCol = -1;
         int nextRow = -1;
         if (y >= HUD_HEIGHT) {
@@ -139,6 +169,20 @@ public final class GamePanel extends JPanel {
         }
     }
 
+    private void updateMenuHover(int x, int y) {
+        int nextHoverLevel = -1;
+        for (int i = 0; i < levelNumbers.size(); i++) {
+            if (levelCardRect(i, levelNumbers.size()).contains(x, y)) {
+                nextHoverLevel = i;
+                break;
+            }
+        }
+        if (hoverLevelIndex != nextHoverLevel) {
+            hoverLevelIndex = nextHoverLevel;
+            repaint();
+        }
+    }
+
     public void start() {
         if (gameTimer.isRunning()) {
             return;
@@ -151,7 +195,9 @@ public final class GamePanel extends JPanel {
         long now = System.nanoTime();
         double deltaSeconds = (now - lastFrameNanos) / 1_000_000_000.0;
         lastFrameNanos = now;
-        state.update(Math.min(deltaSeconds, 0.05) * state.getSpeedMultiplier());
+        if (screen == PanelScreen.PLAYING) {
+            state.update(Math.min(deltaSeconds, 0.05) * state.getSpeedMultiplier());
+        }
         repaint();
     }
 
@@ -160,6 +206,11 @@ public final class GamePanel extends JPanel {
         super.paintComponent(graphics);
         Graphics2D g = (Graphics2D) graphics.create();
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        if (screen == PanelScreen.MENU) {
+            drawMainMenu(g);
+            g.dispose();
+            return;
+        }
         drawHud(g);
         drawMap(g);
         drawBuildPreview(g);
@@ -169,6 +220,95 @@ public final class GamePanel extends JPanel {
         drawContextMenu(g);
         drawOverlay(g);
         g.dispose();
+    }
+
+    void startLevel(int levelNumber) {
+        state.startLevel(levelNumber);
+        screen = PanelScreen.PLAYING;
+        hoverLevelIndex = -1;
+        hoverCol = -1;
+        hoverRow = -1;
+    }
+
+    void showMenu() {
+        screen = PanelScreen.MENU;
+        hoverCol = -1;
+        hoverRow = -1;
+        hoverLevelIndex = -1;
+    }
+
+    boolean isShowingMenu() {
+        return screen == PanelScreen.MENU;
+    }
+
+    int getCurrentLevelNumber() {
+        return state.getLevelNumber();
+    }
+
+    private void drawMainMenu(Graphics2D g) {
+        for (int row = 0; row < ROWS + 3; row++) {
+            for (int col = 0; col < COLS; col++) {
+                GameArt.drawGrassTile(g, col * TILE_SIZE, row * TILE_SIZE, col, row);
+            }
+        }
+
+        g.setColor(new Color(47, 68, 55, 238));
+        g.fillRoundRect(64, 62, WIDTH - 128, 104, 14, 14);
+        g.setColor(new Color(255, 250, 235, 210));
+        g.setStroke(new BasicStroke(2f));
+        g.drawRoundRect(64, 62, WIDTH - 128, 104, 14, 14);
+
+        g.setColor(new Color(255, 250, 235));
+        g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 38));
+        drawCentered(g, "Carrot Guard", 112);
+        g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 16));
+        drawCentered(g, "Level Select", 143);
+
+        for (int i = 0; i < levelNumbers.size(); i++) {
+            drawLevelCard(g, i, levelNumbers.get(i));
+        }
+    }
+
+    private void drawLevelCard(Graphics2D g, int index, int levelNumber) {
+        Rectangle rect = levelCardRect(index, levelNumbers.size());
+        boolean hovered = hoverLevelIndex == index;
+        LevelConfig config = LevelConfig.load(levelNumber);
+
+        g.setColor(new Color(57, 43, 35, hovered ? 95 : 65));
+        g.fillOval(rect.x + 12, rect.y + rect.height - 5, rect.width - 24, 18);
+        g.setColor(hovered ? new Color(250, 216, 114) : new Color(255, 250, 235, 236));
+        g.fillRoundRect(rect.x, rect.y, rect.width, rect.height, 10, 10);
+        g.setColor(new Color(83, 96, 70, hovered ? 210 : 150));
+        g.setStroke(new BasicStroke(2f));
+        g.drawRoundRect(rect.x, rect.y, rect.width, rect.height, 10, 10);
+
+        g.setColor(new Color(58, 79, 65));
+        g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 20));
+        drawCenteredAt(g, "Level " + levelNumber, rect.x + rect.width / 2, rect.y + 34);
+
+        g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
+        drawCenteredAt(g, "Waves " + config.getWaveCount(), rect.x + rect.width / 2, rect.y + 62);
+        drawCenteredAt(g, "Coins " + config.getStartingCoins() + "  HP " + config.getStartingLives(),
+                rect.x + rect.width / 2, rect.y + 84);
+
+        g.setColor(new Color(58, 79, 65));
+        g.fillRoundRect(rect.x + 38, rect.y + rect.height - 34, rect.width - 76, 24, 8, 8);
+        g.setColor(new Color(255, 250, 235));
+        g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
+        drawCenteredAt(g, "Start", rect.x + rect.width / 2, rect.y + rect.height - 17);
+    }
+
+    private Rectangle levelCardRect(int index, int count) {
+        int cardWidth = 178;
+        int cardHeight = 128;
+        int gap = 20;
+        int columns = Math.min(3, Math.max(1, count));
+        int row = index / columns;
+        int col = index % columns;
+        int gridWidth = columns * cardWidth + (columns - 1) * gap;
+        int x = (WIDTH - gridWidth) / 2 + col * (cardWidth + gap);
+        int y = 220 + row * (cardHeight + gap);
+        return new Rectangle(x, y, cardWidth, cardHeight);
     }
 
     private void drawHud(Graphics2D g) {
@@ -186,6 +326,7 @@ public final class GamePanel extends JPanel {
         g.drawString("Wave: " + state.getWave() + "/" + state.getMaxWave(), 350, 62);
 
         drawSelectionHint(g);
+        drawButton(g, menuButton, "Menu", true);
         drawButton(g, speedButton, state.getSpeedLabel(), true);
         drawButton(g, nextButton, "Next", state.isWon() && state.hasNextLevel());
         drawButton(g, pauseButton, state.isPaused() ? "Resume" : "Pause", !state.isGameOver() && !state.isWon());

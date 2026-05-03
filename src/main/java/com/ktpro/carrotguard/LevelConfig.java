@@ -62,6 +62,17 @@ public final class LevelConfig {
         }
     }
 
+    public static List<Integer> availableLevelNumbers() {
+        List<Integer> levels = new ArrayList<>();
+        for (int levelNumber = 1; hasLevel(levelNumber); levelNumber++) {
+            levels.add(levelNumber);
+        }
+        if (levels.isEmpty()) {
+            levels.add(1);
+        }
+        return List.copyOf(levels);
+    }
+
     private static String resourcePath(int levelNumber) {
         return "/levels/level" + levelNumber + ".properties";
     }

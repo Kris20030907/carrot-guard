@@ -100,6 +100,9 @@ public final class GameStateSmokeCheck {
         require(config.getObstacles().size() == 6, "resource level should define six obstacles");
         require(config.getPath().hasOnlyOrthogonalSteps(), "resource path should be orthogonal");
         require(config.getPath().containsTile(5, 4), "resource path should include the first turn connector");
+        require(LevelConfig.availableLevelNumbers().size() >= 2, "level select should discover configured levels");
+        require(LevelConfig.availableLevelNumbers().contains(1), "available levels should include level one");
+        require(LevelConfig.availableLevelNumbers().contains(2), "available levels should include level two");
         require(LevelConfig.hasLevel(2), "second level resource should be available");
         LevelConfig secondLevel = LevelConfig.load(2);
         require(secondLevel.getLevelNumber() == 2, "second level should report its level number");
@@ -133,6 +136,10 @@ public final class GameStateSmokeCheck {
         require(state.tryUpgradeSelectedTower(TowerUpgradeType.DAMAGE), "damage upgrade should be affordable");
         Tower tower = state.getTowerAt(1, 2);
         require(tower != null && tower.getUpgradeLevel(TowerUpgradeType.DAMAGE) == 1, "damage upgrade should be applied");
+        state.startLevel(2);
+        require(state.getLevelNumber() == 2, "startLevel should load a requested level");
+        require(state.getTowers().isEmpty(), "startLevel should reset towers");
+        require(state.getWave() == 1, "startLevel should reset wave progress");
     }
 
     private static void verifyEnemyReachesGoalAtCarrot() {

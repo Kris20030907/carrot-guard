@@ -135,6 +135,10 @@ public final class GameState {
         resetRunState();
     }
 
+    public void startLevel(int levelNumber) {
+        loadLevel(levelNumber);
+    }
+
     public void cycleSpeedMultiplier() {
         speedIndex = (speedIndex + 1) % SPEED_MULTIPLIERS.length;
     }

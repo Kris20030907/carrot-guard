@@ -10,6 +10,9 @@ public final class GamePanelRenderCheck {
     public static void main(String[] args) {
         GamePanel panel = new GamePanel();
         panel.setSize(GamePanel.WIDTH, GamePanel.HEIGHT);
+        if (!panel.isShowingMenu()) {
+            throw new IllegalStateException("panel should start on the main menu");
+        }
 
         BufferedImage image = new BufferedImage(GamePanel.WIDTH, GamePanel.HEIGHT, BufferedImage.TYPE_INT_ARGB);
         Graphics2D graphics = image.createGraphics();
@@ -18,7 +21,25 @@ public final class GamePanelRenderCheck {
 
         int distinctSamples = countDistinctSamples(image);
         if (distinctSamples < 8) {
-            throw new IllegalStateException("rendered panel should contain varied visual content");
+            throw new IllegalStateException("rendered menu should contain varied visual content");
+        }
+
+        panel.startLevel(2);
+        if (panel.isShowingMenu() || panel.getCurrentLevelNumber() != 2) {
+            throw new IllegalStateException("panel should enter a selected level");
+        }
+
+        BufferedImage gameplayImage = new BufferedImage(GamePanel.WIDTH, GamePanel.HEIGHT, BufferedImage.TYPE_INT_ARGB);
+        graphics = gameplayImage.createGraphics();
+        panel.paint(graphics);
+        graphics.dispose();
+        if (countDistinctSamples(gameplayImage) < 8) {
+            throw new IllegalStateException("rendered gameplay should contain varied visual content");
+        }
+
+        panel.showMenu();
+        if (!panel.isShowingMenu()) {
+            throw new IllegalStateException("panel should return to the main menu");
         }
 
         System.out.println("GamePanel render check passed");
