@@ -37,6 +37,8 @@ public final class GameStateSmokeCheck {
         verifyTowerUpgradeFlow();
         verifyTowerUpgradeStats();
         verifyEnemyReachesGoalAtCarrot();
+        verifyEnemiesCanReachGoalOnConfiguredLevels();
+        verifyLeaksCanEndGame();
 
         state.togglePaused();
         for (int i = 0; i < 120; i++) {
@@ -136,5 +138,31 @@ public final class GameStateSmokeCheck {
         require(enemy.hasReachedGoal(), "enemy should reach goal before leaving the map");
         require(Math.abs(enemy.getX() - goalX) < 0.01, "enemy should stop at carrot x when reaching goal");
         require(Math.abs(enemy.getY() - goalY) < 0.01, "enemy should stop at carrot y when reaching goal");
+    }
+
+    private static void verifyEnemiesCanReachGoalOnConfiguredLevels() {
+        verifyEnemyReachesGoalAtCarrot(LevelConfig.load(1));
+        verifyEnemyReachesGoalAtCarrot(LevelConfig.load(2));
+    }
+
+    private static void verifyEnemyReachesGoalAtCarrot(LevelConfig config) {
+        GamePath path = config.getPath();
+        Enemy enemy = new Enemy(path, 1, EnemyType.FAST);
+        enemy.update(20.0);
+        int[] goalTile = path.getGoalTile();
+        double goalX = goalTile[0] * GamePanel.TILE_SIZE + GamePanel.TILE_SIZE / 2.0;
+        double goalY = goalTile[1] * GamePanel.TILE_SIZE + GamePanel.TILE_SIZE / 2.0 + GamePanel.HUD_HEIGHT;
+        require(enemy.hasReachedGoal(), "enemy should reach level " + config.getLevelNumber() + " goal with large delta");
+        require(Math.abs(enemy.getX() - goalX) < 0.01, "enemy should stop at level " + config.getLevelNumber() + " carrot x");
+        require(Math.abs(enemy.getY() - goalY) < 0.01, "enemy should stop at level " + config.getLevelNumber() + " carrot y");
+    }
+
+    private static void verifyLeaksCanEndGame() {
+        GameState state = new GameState();
+        for (int i = 0; i < 80 && !state.isGameOver(); i++) {
+            state.update(10.0);
+        }
+        require(state.isGameOver(), "enough leaked enemies should end the game");
+        require(state.getLives() <= 0, "game over from leaks should exhaust lives");
     }
 }

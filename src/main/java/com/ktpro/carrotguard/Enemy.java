@@ -45,25 +45,30 @@ public final class Enemy implements Target {
             }
         }
 
-        Point target = path.getWaypoint(waypointIndex);
-        double dx = target.x - x;
-        double dy = target.y - y;
-        double distance = Math.hypot(dx, dy);
-        double step = speed * slowFactor * deltaSeconds;
-        if (distance <= step) {
-            x = target.x;
-            y = target.y;
-            if (waypointIndex == path.getGoalWaypointIndex()) {
-                reachedGoal = true;
+        double remainingStep = speed * slowFactor * deltaSeconds;
+        while (remainingStep > 0 && !reachedGoal && !isDead()) {
+            Point target = path.getWaypoint(waypointIndex);
+            double dx = target.x - x;
+            double dy = target.y - y;
+            double distance = Math.hypot(dx, dy);
+            if (distance <= remainingStep) {
+                x = target.x;
+                y = target.y;
+                remainingStep -= distance;
+                if (waypointIndex == path.getGoalWaypointIndex()) {
+                    reachedGoal = true;
+                    return;
+                }
+                waypointIndex++;
+                if (waypointIndex >= path.getWaypointCount()) {
+                    reachedGoal = true;
+                    return;
+                }
+            } else {
+                x += dx / distance * remainingStep;
+                y += dy / distance * remainingStep;
                 return;
             }
-            waypointIndex++;
-            if (waypointIndex >= path.getWaypointCount()) {
-                reachedGoal = true;
-            }
-        } else {
-            x += dx / distance * step;
-            y += dy / distance * step;
         }
     }
 
