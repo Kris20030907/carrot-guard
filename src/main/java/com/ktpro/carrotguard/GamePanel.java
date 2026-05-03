@@ -33,6 +33,7 @@ public final class GamePanel extends JPanel {
     private final GameState state = new GameState();
     private final GameProgress progress;
     private final SoundEffects soundEffects = new SoundEffects();
+    private final AssetStore assets = AssetStore.loadDefault();
     private final List<Integer> levelNumbers = LevelConfig.availableLevelNumbers();
     private final Rectangle menuButton = new Rectangle(294, 14, 78, 28);
     private final Rectangle settingsButton = new Rectangle(208, 14, 78, 28);
@@ -404,7 +405,7 @@ public final class GamePanel extends JPanel {
     private void drawMainMenu(Graphics2D g) {
         for (int row = 0; row < ROWS + 3; row++) {
             for (int col = 0; col < COLS; col++) {
-                GameArt.drawGrassTile(g, col * TILE_SIZE, row * TILE_SIZE, col, row);
+                GameArt.drawGrassTile(g, assets, col * TILE_SIZE, row * TILE_SIZE, col, row);
             }
         }
 
@@ -430,7 +431,7 @@ public final class GamePanel extends JPanel {
     private void drawSettings(Graphics2D g) {
         for (int row = 0; row < ROWS + 3; row++) {
             for (int col = 0; col < COLS; col++) {
-                GameArt.drawGrassTile(g, col * TILE_SIZE, row * TILE_SIZE, col, row);
+                GameArt.drawGrassTile(g, assets, col * TILE_SIZE, row * TILE_SIZE, col, row);
             }
         }
 
@@ -622,9 +623,9 @@ public final class GamePanel extends JPanel {
                 int y = top + row * TILE_SIZE;
                 boolean path = state.getPath().containsTile(col, row);
                 if (path) {
-                    GameArt.drawPathTile(g, x, y, col, row);
+                    GameArt.drawPathTile(g, assets, x, y, col, row);
                 } else {
-                    GameArt.drawGrassTile(g, x, y, col, row);
+                    GameArt.drawGrassTile(g, assets, x, y, col, row);
                 }
             }
         }
@@ -634,7 +635,7 @@ public final class GamePanel extends JPanel {
         int[] goal = state.getPath().getGoalTile();
         int carrotX = goal[0] * TILE_SIZE + TILE_SIZE / 2;
         int carrotY = HUD_HEIGHT + goal[1] * TILE_SIZE + TILE_SIZE / 2;
-        GameArt.drawCarrot(g, carrotX, carrotY, state.isCarrotSelected());
+        GameArt.drawCarrot(g, assets, carrotX, carrotY, state.isCarrotSelected());
         drawCarrotHealthBar(g, carrotX, carrotY);
     }
 
@@ -963,7 +964,7 @@ public final class GamePanel extends JPanel {
 
     private void drawEntities(Graphics2D g) {
         for (Obstacle obstacle : state.getObstacles()) {
-            GameArt.drawObstacle(g, obstacle);
+            GameArt.drawObstacle(g, assets, obstacle);
         }
 
         for (Tower tower : state.getTowers()) {
@@ -981,11 +982,11 @@ public final class GamePanel extends JPanel {
                 g.drawOval(centerX - glow, centerY - glow, glow * 2, glow * 2);
             }
 
-            GameArt.drawTower(g, tower, centerX, centerY, tower == state.getSelectedTower());
+            GameArt.drawTower(g, assets, tower, centerX, centerY, tower == state.getSelectedTower());
         }
 
         for (Projectile projectile : state.getProjectiles()) {
-            GameArt.drawProjectile(g, projectile);
+            GameArt.drawProjectile(g, assets, projectile);
         }
 
         for (HitEffect effect : state.getHitEffects()) {
@@ -1007,7 +1008,7 @@ public final class GamePanel extends JPanel {
         }
 
         for (Enemy enemy : state.getEnemies()) {
-            GameArt.drawEnemy(g, enemy);
+            GameArt.drawEnemy(g, assets, enemy);
         }
     }
 

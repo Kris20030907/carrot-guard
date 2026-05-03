@@ -22,7 +22,12 @@ final class GameArt {
     private GameArt() {
     }
 
-    static void drawGrassTile(Graphics2D g, int x, int y, int col, int row) {
+    static void drawGrassTile(Graphics2D g, AssetStore assets, int x, int y, int col, int row) {
+        if (assets.draw(g, AssetKey.GRASS, x, y, GamePanel.TILE_SIZE, GamePanel.TILE_SIZE)) {
+            g.setColor(GRASS_LINE);
+            g.drawRect(x, y, GamePanel.TILE_SIZE, GamePanel.TILE_SIZE);
+            return;
+        }
         Color base = ((col + row) & 1) == 0 ? GRASS_A : GRASS_B;
         g.setPaint(new GradientPaint(x, y, brighten(base, 13), x + GamePanel.TILE_SIZE, y + GamePanel.TILE_SIZE, darken(base, 11)));
         g.fillRect(x, y, GamePanel.TILE_SIZE, GamePanel.TILE_SIZE);
@@ -39,7 +44,12 @@ final class GameArt {
         }
     }
 
-    static void drawPathTile(Graphics2D g, int x, int y, int col, int row) {
+    static void drawPathTile(Graphics2D g, AssetStore assets, int x, int y, int col, int row) {
+        if (assets.draw(g, AssetKey.PATH, x, y, GamePanel.TILE_SIZE, GamePanel.TILE_SIZE)) {
+            g.setColor(PATH_EDGE);
+            g.drawRect(x, y, GamePanel.TILE_SIZE, GamePanel.TILE_SIZE);
+            return;
+        }
         Color base = ((col + row) & 1) == 0 ? PATH_A : PATH_B;
         g.setPaint(new GradientPaint(x, y, brighten(base, 12), x + GamePanel.TILE_SIZE, y + GamePanel.TILE_SIZE, darken(base, 12)));
         g.fillRect(x, y, GamePanel.TILE_SIZE, GamePanel.TILE_SIZE);
@@ -64,9 +74,17 @@ final class GameArt {
         path.draw(g, GamePanel.HUD_HEIGHT);
     }
 
-    static void drawCarrot(Graphics2D g, int centerX, int centerY, boolean selected) {
+    static void drawCarrot(Graphics2D g, AssetStore assets, int centerX, int centerY, boolean selected) {
         g.setColor(new Color(80, 48, 33, 84));
         g.fillOval(centerX - 21, centerY + 12, 42, 13);
+        if (assets.draw(g, AssetKey.CARROT, centerX - 24, centerY - 34, 48, 62)) {
+            if (selected) {
+                g.setColor(new Color(255, 246, 164, 130));
+                g.setStroke(new BasicStroke(3f));
+                g.drawOval(centerX - 25, centerY - 29, 50, 57);
+            }
+            return;
+        }
 
         g.setColor(new Color(67, 150, 66));
         g.fillOval(centerX - 13, centerY - 31, 17, 16);
@@ -90,23 +108,34 @@ final class GameArt {
         }
     }
 
-    static void drawObstacle(Graphics2D g, Obstacle obstacle) {
+    static void drawObstacle(Graphics2D g, AssetStore assets, Obstacle obstacle) {
         int x = (int) obstacle.getX();
         int y = (int) obstacle.getY();
         drawShadow(g, x, y + 14, 35, 10);
-        if (isRock(obstacle.getBodyColor())) {
-            drawRock(g, obstacle, x, y);
-        } else {
-            drawCrate(g, obstacle, x, y);
+        boolean rock = isRock(obstacle.getBodyColor());
+        AssetKey assetKey = rock ? AssetKey.OBSTACLE_ROCK : AssetKey.OBSTACLE_CRATE;
+        if (!assets.draw(g, assetKey, x - 22, y - 24, 44, 44)) {
+            if (rock) {
+                drawRock(g, obstacle, x, y);
+            } else {
+                drawCrate(g, obstacle, x, y);
+            }
         }
         drawHealthBar(g, x - 18, y - 30, 36, 6, obstacle.getHealthRatio(), new Color(247, 197, 74));
     }
 
-    static void drawTower(Graphics2D g, Tower tower, int centerX, int centerY, boolean selected) {
+    static void drawTower(Graphics2D g, AssetStore assets, Tower tower, int centerX, int centerY, boolean selected) {
         drawShadow(g, centerX, centerY + 17, 41, 12);
         if (selected) {
             g.setColor(new Color(255, 246, 164, 85));
             g.fillOval(centerX - 25, centerY - 25, 50, 50);
+        }
+
+        if (assets.draw(g, towerAssetKey(tower.getType()), centerX - 24, centerY - 32, 48, 56)) {
+            g.setColor(CREAM);
+            g.setFont(new java.awt.Font(java.awt.Font.SANS_SERIF, java.awt.Font.BOLD, 12));
+            drawCenteredAt(g, String.valueOf(tower.getLevel()), centerX, centerY + 7);
+            return;
         }
 
         g.setPaint(new GradientPaint(centerX - 19, centerY - 19, brighten(tower.getType().getBodyColor(), selected ? 38 : 24),
@@ -129,11 +158,14 @@ final class GameArt {
         drawCenteredAt(g, String.valueOf(tower.getLevel()), centerX, centerY + 7);
     }
 
-    static void drawProjectile(Graphics2D g, Projectile projectile) {
+    static void drawProjectile(Graphics2D g, AssetStore assets, Projectile projectile) {
         int x = (int) projectile.getX();
         int y = (int) projectile.getY();
         int size = projectile.getTowerType().hasSplashEffect() ? 13 : 10;
         drawShadow(g, x, y + 4, size + 4, 5);
+        if (assets.draw(g, projectileAssetKey(projectile.getTowerType()), x - size, y - size, size * 2, size * 2)) {
+            return;
+        }
         g.setPaint(new GradientPaint(x - size / 2, y - size / 2, brighten(projectile.getTowerType().getBodyColor(), 48),
                 x + size / 2, y + size / 2, projectile.getTowerType().getBarrelColor()));
         g.fillOval(x - size / 2, y - size / 2, size, size);
@@ -141,11 +173,20 @@ final class GameArt {
         g.fillOval(x - size / 4, y - size / 3, Math.max(3, size / 3), Math.max(3, size / 3));
     }
 
-    static void drawEnemy(Graphics2D g, Enemy enemy) {
+    static void drawEnemy(Graphics2D g, AssetStore assets, Enemy enemy) {
         int x = (int) enemy.getX();
         int y = (int) enemy.getY();
         int radius = enemy.getType().getRadius();
         drawShadow(g, x, y + radius - 1, radius * 2 + 7, 11);
+        if (assets.draw(g, enemyAssetKey(enemy.getType()), x - radius - 8, y - radius - 10, radius * 2 + 16, radius * 2 + 18)) {
+            if (enemy.isSlowed()) {
+                g.setColor(new Color(104, 220, 235, 170));
+                g.setStroke(new BasicStroke(2f));
+                g.drawOval(x - radius - 5, y - radius - 5, (radius + 5) * 2, (radius + 5) * 2);
+            }
+            drawHealthBar(g, x - radius - 2, y - radius - 11, radius * 2 + 4, 5, enemy.getHealthRatio(), HEALTH_OK);
+            return;
+        }
 
         Color body = enemy.getType().getBodyColor();
         g.setPaint(new GradientPaint(x - radius, y - radius, brighten(body, 32), x + radius, y + radius, darken(body, 20)));
@@ -184,6 +225,30 @@ final class GameArt {
 
     static Color healthColor(double ratio) {
         return ratio > 0.35 ? HEALTH_OK : HEALTH_LOW;
+    }
+
+    private static AssetKey towerAssetKey(TowerType type) {
+        return switch (type) {
+            case BASIC -> AssetKey.TOWER_BASIC;
+            case SLOW -> AssetKey.TOWER_SLOW;
+            case SPLASH -> AssetKey.TOWER_SPLASH;
+        };
+    }
+
+    private static AssetKey projectileAssetKey(TowerType type) {
+        return switch (type) {
+            case BASIC -> AssetKey.PROJECTILE_BASIC;
+            case SLOW -> AssetKey.PROJECTILE_SLOW;
+            case SPLASH -> AssetKey.PROJECTILE_SPLASH;
+        };
+    }
+
+    private static AssetKey enemyAssetKey(EnemyType type) {
+        return switch (type) {
+            case NORMAL -> AssetKey.ENEMY_NORMAL;
+            case FAST -> AssetKey.ENEMY_FAST;
+            case TANK -> AssetKey.ENEMY_TANK;
+        };
     }
 
     private static void drawBasicTowerTop(Graphics2D g, Tower tower, int centerX, int centerY) {
