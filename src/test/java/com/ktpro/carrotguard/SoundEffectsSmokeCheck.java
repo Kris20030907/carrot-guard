@@ -6,10 +6,14 @@ public final class SoundEffectsSmokeCheck {
 
     public static void main(String[] args) {
         SoundEffects sounds = new SoundEffects();
+        sounds.setVolume(0.35);
+        require(Math.abs(sounds.getVolume() - 0.35) < 0.001, "volume should be mutable");
         sounds.play(SoundEffect.CLICK);
         sounds.play(SoundEffect.HIT);
         sounds.play(SoundEffect.HIT);
         sounds.play(SoundEffect.VICTORY);
+        sounds.setEnabled(false);
+        sounds.play(SoundEffect.CLICK);
         require(sounds != null, "sound effects should be constructable");
         System.out.println("SoundEffects smoke check passed");
     }

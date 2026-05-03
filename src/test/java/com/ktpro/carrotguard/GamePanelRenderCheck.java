@@ -17,6 +17,9 @@ public final class GamePanelRenderCheck {
         if (!panel.isShowingMenu()) {
             throw new IllegalStateException("panel should start on the main menu");
         }
+        if (!panel.isSoundEnabled() || panel.getSoundVolume() != 70) {
+            throw new IllegalStateException("panel should load default sound settings");
+        }
         if (!panel.isLevelUnlocked(1) || panel.isLevelUnlocked(2)) {
             throw new IllegalStateException("fresh progress should only unlock level one");
         }
@@ -33,6 +36,19 @@ public final class GamePanelRenderCheck {
         if (distinctSamples < 8) {
             throw new IllegalStateException("rendered menu should contain varied visual content");
         }
+
+        panel.showSettings();
+        if (!panel.isShowingSettings()) {
+            throw new IllegalStateException("panel should open settings");
+        }
+        BufferedImage settingsImage = new BufferedImage(GamePanel.WIDTH, GamePanel.HEIGHT, BufferedImage.TYPE_INT_ARGB);
+        graphics = settingsImage.createGraphics();
+        panel.paint(graphics);
+        graphics.dispose();
+        if (countDistinctSamples(settingsImage) < 8) {
+            throw new IllegalStateException("rendered settings should contain varied visual content");
+        }
+        panel.showMenu();
 
         progress.recordVictory(1, 2, true);
         if (!panel.isLevelUnlocked(2) || panel.getBestStars(1) != 2) {

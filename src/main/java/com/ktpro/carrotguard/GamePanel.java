@@ -26,7 +26,8 @@ public final class GamePanel extends JPanel {
 
     private enum PanelScreen {
         MENU,
-        PLAYING
+        PLAYING,
+        SETTINGS
     }
 
     private final GameState state = new GameState();
@@ -34,12 +35,14 @@ public final class GamePanel extends JPanel {
     private final SoundEffects soundEffects = new SoundEffects();
     private final List<Integer> levelNumbers = LevelConfig.availableLevelNumbers();
     private final Rectangle menuButton = new Rectangle(294, 14, 78, 28);
+    private final Rectangle settingsButton = new Rectangle(208, 14, 78, 28);
     private final Rectangle speedButton = new Rectangle(380, 14, 78, 28);
     private final Rectangle nextButton = new Rectangle(466, 14, 78, 28);
     private final Rectangle pauseButton = new Rectangle(552, 14, 78, 28);
     private final Rectangle restartButton = new Rectangle(638, 14, 72, 28);
     private final Timer gameTimer = new Timer(16, event -> tick());
     private PanelScreen screen = PanelScreen.MENU;
+    private PanelScreen previousScreen = PanelScreen.MENU;
     private long lastFrameNanos;
     private int hoverCol = -1;
     private int hoverRow = -1;
@@ -55,6 +58,7 @@ public final class GamePanel extends JPanel {
 
     GamePanel(GameProgress progress) {
         this.progress = progress;
+        syncSoundSettings();
         setBackground(new Color(247, 239, 218));
         addMouseListener(new MouseAdapter() {
             @Override
@@ -91,6 +95,10 @@ public final class GamePanel extends JPanel {
             handleMenuClick(x, y);
             return;
         }
+        if (screen == PanelScreen.SETTINGS) {
+            handleSettingsClick(x, y);
+            return;
+        }
         if (handleContextAction(x, y)) {
             return;
         }
@@ -105,6 +113,9 @@ public final class GamePanel extends JPanel {
             if (menuButton.contains(x, y)) {
                 soundEffects.play(SoundEffect.CLICK);
                 showMenu();
+            } else if (settingsButton.contains(x, y)) {
+                soundEffects.play(SoundEffect.CLICK);
+                showSettings(PanelScreen.PLAYING);
             } else if (speedButton.contains(x, y)) {
                 soundEffects.play(SoundEffect.CLICK);
                 state.cycleSpeedMultiplier();
@@ -133,6 +144,11 @@ public final class GamePanel extends JPanel {
     }
 
     private void handleMenuClick(int x, int y) {
+        if (menuSettingsButtonRect().contains(x, y)) {
+            soundEffects.play(SoundEffect.CLICK);
+            showSettings(PanelScreen.MENU);
+            return;
+        }
         for (int i = 0; i < levelNumbers.size(); i++) {
             int levelNumber = levelNumbers.get(i);
             if (progress.isUnlocked(levelNumber) && levelCardRect(i, levelNumbers.size()).contains(x, y)) {
@@ -140,6 +156,37 @@ public final class GamePanel extends JPanel {
                 startLevel(levelNumbers.get(i));
                 return;
             }
+        }
+    }
+
+    private void handleSettingsClick(int x, int y) {
+        if (soundToggleRect().contains(x, y)) {
+            progress.setSoundEnabled(!progress.isSoundEnabled());
+            syncSoundSettings();
+            soundEffects.play(SoundEffect.CLICK);
+            return;
+        }
+        if (volumeDownRect().contains(x, y)) {
+            progress.setSoundVolume(progress.getSoundVolume() - 10);
+            syncSoundSettings();
+            soundEffects.play(SoundEffect.CLICK);
+            return;
+        }
+        if (volumeUpRect().contains(x, y)) {
+            progress.setSoundVolume(progress.getSoundVolume() + 10);
+            syncSoundSettings();
+            soundEffects.play(SoundEffect.CLICK);
+            return;
+        }
+        if (clearProgressRect().contains(x, y)) {
+            progress.clearLevelProgress();
+            soundEffects.play(SoundEffect.CLICK);
+            previousScreen = PanelScreen.MENU;
+            return;
+        }
+        if (settingsBackRect().contains(x, y)) {
+            soundEffects.play(SoundEffect.CLICK);
+            screen = previousScreen;
         }
     }
 
@@ -174,6 +221,9 @@ public final class GamePanel extends JPanel {
     private void updateHoverTile(int x, int y) {
         if (screen == PanelScreen.MENU) {
             updateMenuHover(x, y);
+            return;
+        }
+        if (screen == PanelScreen.SETTINGS) {
             return;
         }
         int nextCol = -1;
@@ -245,6 +295,11 @@ public final class GamePanel extends JPanel {
             g.dispose();
             return;
         }
+        if (screen == PanelScreen.SETTINGS) {
+            drawSettings(g);
+            g.dispose();
+            return;
+        }
         drawHud(g);
         drawMap(g);
         drawBuildPreview(g);
@@ -273,8 +328,24 @@ public final class GamePanel extends JPanel {
         hoverLevelIndex = -1;
     }
 
+    void showSettings() {
+        showSettings(screen);
+    }
+
+    void showSettings(PanelScreen previousScreen) {
+        this.previousScreen = previousScreen;
+        screen = PanelScreen.SETTINGS;
+        hoverCol = -1;
+        hoverRow = -1;
+        hoverLevelIndex = -1;
+    }
+
     boolean isShowingMenu() {
         return screen == PanelScreen.MENU;
+    }
+
+    boolean isShowingSettings() {
+        return screen == PanelScreen.SETTINGS;
     }
 
     int getCurrentLevelNumber() {
@@ -287,6 +358,14 @@ public final class GamePanel extends JPanel {
 
     boolean isLevelUnlocked(int levelNumber) {
         return progress.isUnlocked(levelNumber);
+    }
+
+    int getSoundVolume() {
+        return progress.getSoundVolume();
+    }
+
+    boolean isSoundEnabled() {
+        return progress.isSoundEnabled();
     }
 
     private void recordVictoryIfNeeded() {
@@ -317,6 +396,11 @@ public final class GamePanel extends JPanel {
         observedClearedObstacleEvents = state.getClearedObstacleEventCount();
     }
 
+    private void syncSoundSettings() {
+        soundEffects.setEnabled(progress.isSoundEnabled());
+        soundEffects.setVolume(progress.getSoundVolume() / 100.0);
+    }
+
     private void drawMainMenu(Graphics2D g) {
         for (int row = 0; row < ROWS + 3; row++) {
             for (int col = 0; col < COLS; col++) {
@@ -335,11 +419,47 @@ public final class GamePanel extends JPanel {
         drawCentered(g, "Carrot Guard", 112);
         g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 16));
         drawCentered(g, "Level Select", 143);
+        drawButton(g, menuSettingsButtonRect(), "Settings", true);
 
         drawLevelRoute(g);
         for (int i = 0; i < levelNumbers.size(); i++) {
             drawLevelCard(g, i, levelNumbers.get(i));
         }
+    }
+
+    private void drawSettings(Graphics2D g) {
+        for (int row = 0; row < ROWS + 3; row++) {
+            for (int col = 0; col < COLS; col++) {
+                GameArt.drawGrassTile(g, col * TILE_SIZE, row * TILE_SIZE, col, row);
+            }
+        }
+
+        int panelWidth = 392;
+        int panelHeight = 292;
+        int panelX = (WIDTH - panelWidth) / 2;
+        int panelY = 142;
+        g.setColor(new Color(47, 68, 55, 238));
+        g.fillRoundRect(panelX, panelY, panelWidth, panelHeight, 14, 14);
+        g.setColor(new Color(255, 250, 235, 210));
+        g.setStroke(new BasicStroke(2f));
+        g.drawRoundRect(panelX, panelY, panelWidth, panelHeight, 14, 14);
+
+        g.setColor(new Color(255, 250, 235));
+        g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 28));
+        drawCentered(g, "Settings", panelY + 44);
+
+        g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 15));
+        g.drawString("Sound", panelX + 44, panelY + 92);
+        drawButton(g, soundToggleRect(), progress.isSoundEnabled() ? "On" : "Off", true);
+
+        g.drawString("Volume", panelX + 44, panelY + 146);
+        drawButton(g, volumeDownRect(), "-", progress.getSoundVolume() > 0);
+        g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 16));
+        drawCenteredAt(g, progress.getSoundVolume() + "%", panelX + panelWidth / 2, panelY + 150);
+        drawButton(g, volumeUpRect(), "+", progress.getSoundVolume() < 100);
+
+        drawButton(g, clearProgressRect(), "Clear Save", true);
+        drawButton(g, settingsBackRect(), "Back", true);
     }
 
     private void drawLevelRoute(Graphics2D g) {
@@ -414,6 +534,30 @@ public final class GamePanel extends JPanel {
         return new Rectangle(x, y, cardWidth, cardHeight);
     }
 
+    private Rectangle menuSettingsButtonRect() {
+        return new Rectangle(WIDTH - 132, 92, 96, 32);
+    }
+
+    private Rectangle soundToggleRect() {
+        return new Rectangle(WIDTH / 2 + 50, 214, 84, 32);
+    }
+
+    private Rectangle volumeDownRect() {
+        return new Rectangle(WIDTH / 2 + 50, 268, 40, 32);
+    }
+
+    private Rectangle volumeUpRect() {
+        return new Rectangle(WIDTH / 2 + 118, 268, 40, 32);
+    }
+
+    private Rectangle clearProgressRect() {
+        return new Rectangle(WIDTH / 2 - 134, 334, 128, 34);
+    }
+
+    private Rectangle settingsBackRect() {
+        return new Rectangle(WIDTH / 2 + 28, 334, 106, 34);
+    }
+
     private void drawHud(Graphics2D g) {
         g.setColor(new Color(58, 79, 65));
         g.fillRect(0, 0, WIDTH, HUD_HEIGHT);
@@ -429,6 +573,7 @@ public final class GamePanel extends JPanel {
         g.drawString("Wave: " + state.getWave() + "/" + state.getMaxWave(), 350, 62);
 
         drawSelectionHint(g);
+        drawButton(g, settingsButton, "Settings", true);
         drawButton(g, menuButton, "Menu", true);
         drawButton(g, speedButton, state.getSpeedLabel(), true);
         drawButton(g, nextButton, "Next", state.isWon() && state.hasNextLevel());

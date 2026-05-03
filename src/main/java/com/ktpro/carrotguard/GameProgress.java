@@ -11,9 +11,13 @@ public final class GameProgress {
     private static final String HIGHEST_UNLOCKED_LEVEL = "highestUnlockedLevel";
     private static final String BEST_STARS_PREFIX = "level.";
     private static final String BEST_STARS_SUFFIX = ".stars";
+    private static final String SOUND_ENABLED = "sound.enabled";
+    private static final String SOUND_VOLUME = "sound.volume";
 
     private final Path savePath;
     private int highestUnlockedLevel = 1;
+    private boolean soundEnabled = true;
+    private int soundVolume = 70;
     private final Properties bestStars = new Properties();
 
     public GameProgress(Path savePath) {
@@ -46,6 +50,30 @@ public final class GameProgress {
         return highestUnlockedLevel;
     }
 
+    public boolean isSoundEnabled() {
+        return soundEnabled;
+    }
+
+    public void setSoundEnabled(boolean soundEnabled) {
+        this.soundEnabled = soundEnabled;
+        save();
+    }
+
+    public int getSoundVolume() {
+        return soundVolume;
+    }
+
+    public void setSoundVolume(int soundVolume) {
+        this.soundVolume = Math.max(0, Math.min(100, soundVolume));
+        save();
+    }
+
+    public void clearLevelProgress() {
+        highestUnlockedLevel = 1;
+        bestStars.clear();
+        save();
+    }
+
     public void recordVictory(int levelNumber, int stars, boolean hasNextLevel) {
         if (levelNumber <= 0 || stars <= 0) {
             return;
@@ -73,6 +101,8 @@ public final class GameProgress {
             return;
         }
         highestUnlockedLevel = parseUnlockedLevel(data.getProperty(HIGHEST_UNLOCKED_LEVEL));
+        soundEnabled = parseBoolean(data.getProperty(SOUND_ENABLED), true);
+        soundVolume = parseVolume(data.getProperty(SOUND_VOLUME));
         for (String key : data.stringPropertyNames()) {
             if (key.startsWith(BEST_STARS_PREFIX) && key.endsWith(BEST_STARS_SUFFIX)) {
                 bestStars.setProperty(key, data.getProperty(key));
@@ -83,6 +113,8 @@ public final class GameProgress {
     private void save() {
         Properties data = new Properties();
         data.setProperty(HIGHEST_UNLOCKED_LEVEL, String.valueOf(Math.max(1, highestUnlockedLevel)));
+        data.setProperty(SOUND_ENABLED, String.valueOf(soundEnabled));
+        data.setProperty(SOUND_VOLUME, String.valueOf(soundVolume));
         for (String key : bestStars.stringPropertyNames()) {
             data.setProperty(key, bestStars.getProperty(key));
         }
@@ -108,6 +140,24 @@ public final class GameProgress {
             return Math.max(1, Integer.parseInt(value));
         } catch (NumberFormatException e) {
             return 1;
+        }
+    }
+
+    private boolean parseBoolean(String value, boolean fallback) {
+        if (value == null) {
+            return fallback;
+        }
+        return Boolean.parseBoolean(value);
+    }
+
+    private int parseVolume(String value) {
+        if (value == null) {
+            return 70;
+        }
+        try {
+            return Math.max(0, Math.min(100, Integer.parseInt(value)));
+        } catch (NumberFormatException e) {
+            return 70;
         }
     }
 

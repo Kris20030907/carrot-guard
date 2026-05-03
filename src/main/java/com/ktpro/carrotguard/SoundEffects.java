@@ -11,7 +11,9 @@ public final class SoundEffects {
     private static final int HIT_THROTTLE_MS = 75;
 
     private final Map<SoundEffect, byte[]> samples = new EnumMap<>(SoundEffect.class);
-    private boolean enabled = true;
+    private boolean userEnabled = true;
+    private boolean audioAvailable = true;
+    private double volume = 0.7;
     private long lastHitMillis;
 
     public SoundEffects() {
@@ -26,7 +28,7 @@ public final class SoundEffects {
     }
 
     public void play(SoundEffect effect) {
-        if (!enabled) {
+        if (!isEnabled() || volume <= 0) {
             return;
         }
         if (effect == SoundEffect.HIT && isHitThrottled()) {
@@ -38,7 +40,8 @@ public final class SoundEffects {
         }
         try {
             Clip clip = AudioSystem.getClip();
-            clip.open(format(), data, 0, data.length);
+            byte[] adjusted = scaled(data);
+            clip.open(format(), adjusted, 0, adjusted.length);
             clip.addLineListener(event -> {
                 switch (event.getType().toString()) {
                     case "Stop", "Close" -> clip.close();
@@ -48,12 +51,24 @@ public final class SoundEffects {
             });
             clip.start();
         } catch (Exception e) {
-            enabled = false;
+            audioAvailable = false;
         }
     }
 
     boolean isEnabled() {
-        return enabled;
+        return userEnabled && audioAvailable;
+    }
+
+    void setEnabled(boolean enabled) {
+        this.userEnabled = enabled;
+    }
+
+    double getVolume() {
+        return volume;
+    }
+
+    void setVolume(double volume) {
+        this.volume = Math.max(0.0, Math.min(1.0, volume));
     }
 
     private boolean isHitThrottled() {
@@ -67,6 +82,14 @@ public final class SoundEffects {
 
     private AudioFormat format() {
         return new AudioFormat(SAMPLE_RATE, 8, 1, true, false);
+    }
+
+    private byte[] scaled(byte[] data) {
+        byte[] adjusted = new byte[data.length];
+        for (int i = 0; i < data.length; i++) {
+            adjusted[i] = (byte) Math.max(-128, Math.min(127, (int) Math.round(data[i] * volume)));
+        }
+        return adjusted;
     }
 
     private byte[] tone(double frequency, double seconds, double volume) {
