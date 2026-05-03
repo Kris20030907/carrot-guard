@@ -2,16 +2,23 @@ package com.ktpro.carrotguard;
 
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 public final class GamePanelRenderCheck {
     private GamePanelRenderCheck() {
     }
 
     public static void main(String[] args) {
-        GamePanel panel = new GamePanel();
+        GameProgress progress = new GameProgress(tempProgressPath());
+        GamePanel panel = new GamePanel(progress);
         panel.setSize(GamePanel.WIDTH, GamePanel.HEIGHT);
         if (!panel.isShowingMenu()) {
             throw new IllegalStateException("panel should start on the main menu");
+        }
+        if (!panel.isLevelUnlocked(1) || panel.isLevelUnlocked(2)) {
+            throw new IllegalStateException("fresh progress should only unlock level one");
         }
 
         BufferedImage image = new BufferedImage(GamePanel.WIDTH, GamePanel.HEIGHT, BufferedImage.TYPE_INT_ARGB);
@@ -22,6 +29,11 @@ public final class GamePanelRenderCheck {
         int distinctSamples = countDistinctSamples(image);
         if (distinctSamples < 8) {
             throw new IllegalStateException("rendered menu should contain varied visual content");
+        }
+
+        progress.recordVictory(1, 2, true);
+        if (!panel.isLevelUnlocked(2) || panel.getBestStars(1) != 2) {
+            throw new IllegalStateException("recorded progress should unlock level two and keep stars");
         }
 
         panel.startLevel(2);
@@ -43,6 +55,14 @@ public final class GamePanelRenderCheck {
         }
 
         System.out.println("GamePanel render check passed");
+    }
+
+    private static Path tempProgressPath() {
+        try {
+            return Files.createTempDirectory("carrot-guard-render-progress").resolve("progress.properties");
+        } catch (IOException e) {
+            throw new IllegalStateException("could not create temp progress file", e);
+        }
     }
 
     private static int countDistinctSamples(BufferedImage image) {

@@ -30,6 +30,7 @@ public final class GamePanel extends JPanel {
     }
 
     private final GameState state = new GameState();
+    private final GameProgress progress;
     private final List<Integer> levelNumbers = LevelConfig.availableLevelNumbers();
     private final Rectangle menuButton = new Rectangle(294, 14, 78, 28);
     private final Rectangle speedButton = new Rectangle(380, 14, 78, 28);
@@ -42,8 +43,14 @@ public final class GamePanel extends JPanel {
     private int hoverCol = -1;
     private int hoverRow = -1;
     private int hoverLevelIndex = -1;
+    private boolean victoryRecorded;
 
     public GamePanel() {
+        this(GameProgress.loadDefault());
+    }
+
+    GamePanel(GameProgress progress) {
+        this.progress = progress;
         setBackground(new Color(247, 239, 218));
         addMouseListener(new MouseAdapter() {
             @Override
@@ -96,11 +103,15 @@ public final class GamePanel extends JPanel {
             } else if (speedButton.contains(x, y)) {
                 state.cycleSpeedMultiplier();
             } else if (nextButton.contains(x, y) && state.isWon() && state.hasNextLevel()) {
-                state.advanceToNextLevel();
+                recordVictoryIfNeeded();
+                if (state.advanceToNextLevel()) {
+                    victoryRecorded = false;
+                }
             } else if (pauseButton.contains(x, y)) {
                 state.togglePaused();
             } else if (restartButton.contains(x, y)) {
                 state.restart();
+                victoryRecorded = false;
             }
             return;
         }
@@ -112,7 +123,8 @@ public final class GamePanel extends JPanel {
 
     private void handleMenuClick(int x, int y) {
         for (int i = 0; i < levelNumbers.size(); i++) {
-            if (levelCardRect(i, levelNumbers.size()).contains(x, y)) {
+            int levelNumber = levelNumbers.get(i);
+            if (progress.isUnlocked(levelNumber) && levelCardRect(i, levelNumbers.size()).contains(x, y)) {
                 startLevel(levelNumbers.get(i));
                 return;
             }
@@ -196,7 +208,11 @@ public final class GamePanel extends JPanel {
         double deltaSeconds = (now - lastFrameNanos) / 1_000_000_000.0;
         lastFrameNanos = now;
         if (screen == PanelScreen.PLAYING) {
+            boolean wasWon = state.isWon();
             state.update(Math.min(deltaSeconds, 0.05) * state.getSpeedMultiplier());
+            if (!wasWon && state.isWon()) {
+                recordVictoryIfNeeded();
+            }
         }
         repaint();
     }
@@ -225,6 +241,7 @@ public final class GamePanel extends JPanel {
     void startLevel(int levelNumber) {
         state.startLevel(levelNumber);
         screen = PanelScreen.PLAYING;
+        victoryRecorded = false;
         hoverLevelIndex = -1;
         hoverCol = -1;
         hoverRow = -1;
@@ -243,6 +260,21 @@ public final class GamePanel extends JPanel {
 
     int getCurrentLevelNumber() {
         return state.getLevelNumber();
+    }
+
+    int getBestStars(int levelNumber) {
+        return progress.getBestStars(levelNumber);
+    }
+
+    boolean isLevelUnlocked(int levelNumber) {
+        return progress.isUnlocked(levelNumber);
+    }
+
+    private void recordVictoryIfNeeded() {
+        if (!victoryRecorded && state.isWon()) {
+            progress.recordVictory(state.getLevelNumber(), state.getStarRating(), state.hasNextLevel());
+            victoryRecorded = true;
+        }
     }
 
     private void drawMainMenu(Graphics2D g) {
@@ -272,17 +304,20 @@ public final class GamePanel extends JPanel {
     private void drawLevelCard(Graphics2D g, int index, int levelNumber) {
         Rectangle rect = levelCardRect(index, levelNumbers.size());
         boolean hovered = hoverLevelIndex == index;
+        boolean unlocked = progress.isUnlocked(levelNumber);
         LevelConfig config = LevelConfig.load(levelNumber);
 
         g.setColor(new Color(57, 43, 35, hovered ? 95 : 65));
         g.fillOval(rect.x + 12, rect.y + rect.height - 5, rect.width - 24, 18);
-        g.setColor(hovered ? new Color(250, 216, 114) : new Color(255, 250, 235, 236));
+        g.setColor(unlocked
+                ? (hovered ? new Color(250, 216, 114) : new Color(255, 250, 235, 236))
+                : new Color(151, 158, 142, 236));
         g.fillRoundRect(rect.x, rect.y, rect.width, rect.height, 10, 10);
-        g.setColor(new Color(83, 96, 70, hovered ? 210 : 150));
+        g.setColor(unlocked ? new Color(83, 96, 70, hovered ? 210 : 150) : new Color(85, 91, 82, 180));
         g.setStroke(new BasicStroke(2f));
         g.drawRoundRect(rect.x, rect.y, rect.width, rect.height, 10, 10);
 
-        g.setColor(new Color(58, 79, 65));
+        g.setColor(unlocked ? new Color(58, 79, 65) : new Color(71, 76, 69));
         g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 20));
         drawCenteredAt(g, "Level " + levelNumber, rect.x + rect.width / 2, rect.y + 34);
 
@@ -291,11 +326,13 @@ public final class GamePanel extends JPanel {
         drawCenteredAt(g, "Coins " + config.getStartingCoins() + "  HP " + config.getStartingLives(),
                 rect.x + rect.width / 2, rect.y + 84);
 
-        g.setColor(new Color(58, 79, 65));
+        g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
+        drawCenteredAt(g, "Stars " + progress.getBestStars(levelNumber) + "/3", rect.x + rect.width / 2, rect.y + 106);
+
+        g.setColor(unlocked ? new Color(58, 79, 65) : new Color(88, 93, 84));
         g.fillRoundRect(rect.x + 38, rect.y + rect.height - 34, rect.width - 76, 24, 8, 8);
         g.setColor(new Color(255, 250, 235));
-        g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
-        drawCenteredAt(g, "Start", rect.x + rect.width / 2, rect.y + rect.height - 17);
+        drawCenteredAt(g, unlocked ? "Start" : "Locked", rect.x + rect.width / 2, rect.y + rect.height - 17);
     }
 
     private Rectangle levelCardRect(int index, int count) {

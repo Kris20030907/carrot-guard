@@ -9,6 +9,7 @@
 - Maven 项目结构
 - 轻量 Java2D 美术层，集中绘制地图、萝卜、炮塔、敌人、障碍物和投射物
 - 主菜单和关卡选择界面
+- 本地进度存档，记录关卡解锁状态和每关最高星级
 - 敌人沿固定路线移动
 - 点击空地后可选择建造普通、减速、范围三种炮塔
 - 普通、快速、重甲三种怪物
@@ -50,6 +51,7 @@ mvn -q -DskipTests package
 javac -cp target/classes -d /tmp/carrot-guard-test-out $(find src/test/java -name "*.java")
 java -cp target/classes:/tmp/carrot-guard-test-out com.ktpro.carrotguard.GameStateSmokeCheck
 java -cp target/classes:/tmp/carrot-guard-test-out com.ktpro.carrotguard.GamePanelRenderCheck
+java -cp target/classes:/tmp/carrot-guard-test-out com.ktpro.carrotguard.GameProgressSmokeCheck
 ```
 
 ## 关卡配置
@@ -65,6 +67,7 @@ java -cp target/classes:/tmp/carrot-guard-test-out com.ktpro.carrotguard.GamePan
 
 - 鼠标左键点击草地格子：选择建造位置
 - 主菜单点击关卡卡片：进入对应关卡
+- 未解锁关卡会显示 Locked，通关前一关后解锁下一关
 - 鼠标左键点击已有炮塔：选中炮塔
 - 鼠标左键点击萝卜：查看萝卜当前 HP
 - 格子旁 Basic / Slow / Splash：在已选格子建造对应炮塔，金币不足时按钮为红色
@@ -83,6 +86,7 @@ java -cp target/classes:/tmp/carrot-guard-test-out com.ktpro.carrotguard.GamePan
 - 敌人抵达终点会扣生命值
 - 击败敌人会获得金币
 - 通关结算会根据剩余 HP 和漏怪数给出星级评价
+- 本地存档默认保存在用户目录的 `.carrot-guard/progress.properties`
 
 ## 近期路线
 
