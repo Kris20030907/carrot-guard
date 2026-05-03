@@ -77,11 +77,11 @@ final class GameArt {
     static void drawCarrot(Graphics2D g, AssetStore assets, int centerX, int centerY, boolean selected) {
         g.setColor(new Color(80, 48, 33, 84));
         g.fillOval(centerX - 21, centerY + 12, 42, 13);
-        if (assets.draw(g, AssetKey.CARROT, centerX - 24, centerY - 34, 48, 62)) {
+        if (assets.draw(g, AssetKey.CARROT, centerX - 37, centerY - 53, 74, 96)) {
             if (selected) {
                 g.setColor(new Color(255, 246, 164, 130));
                 g.setStroke(new BasicStroke(3f));
-                g.drawOval(centerX - 25, centerY - 29, 50, 57);
+                g.drawOval(centerX - 35, centerY - 48, 70, 88);
             }
             return;
         }
@@ -131,10 +131,8 @@ final class GameArt {
             g.fillOval(centerX - 25, centerY - 25, 50, 50);
         }
 
-        if (assets.draw(g, towerAssetKey(tower.getType()), centerX - 24, centerY - 32, 48, 56)) {
-            g.setColor(CREAM);
-            g.setFont(new java.awt.Font(java.awt.Font.SANS_SERIF, java.awt.Font.BOLD, 12));
-            drawCenteredAt(g, String.valueOf(tower.getLevel()), centerX, centerY + 7);
+        if (assets.draw(g, towerAssetKey(tower.getType()), centerX - 30, centerY - 43, 60, 76)) {
+            drawTowerLevelBadge(g, tower.getLevel(), centerX + 18, centerY - 24);
             return;
         }
 
@@ -178,7 +176,9 @@ final class GameArt {
         int y = (int) enemy.getY();
         int radius = enemy.getType().getRadius();
         drawShadow(g, x, y + radius - 1, radius * 2 + 7, 11);
-        if (assets.draw(g, enemyAssetKey(enemy.getType()), x - radius - 8, y - radius - 10, radius * 2 + 16, radius * 2 + 18)) {
+        int assetWidth = radius * 2 + 24;
+        int assetHeight = radius * 2 + 28;
+        if (assets.draw(g, enemyAssetKey(enemy.getType()), x - assetWidth / 2, y - assetHeight / 2 - 2, assetWidth, assetHeight)) {
             if (enemy.isSlowed()) {
                 g.setColor(new Color(104, 220, 235, 170));
                 g.setStroke(new BasicStroke(2f));
@@ -272,6 +272,14 @@ final class GameArt {
         g.fillRoundRect(centerX - 9, centerY - 27, 18, 22, 8, 8);
         g.setColor(new Color(255, 191, 100, 145));
         g.fillOval(centerX - 7, centerY - 31, 14, 10);
+    }
+
+    private static void drawTowerLevelBadge(Graphics2D g, int level, int centerX, int centerY) {
+        g.setColor(new Color(51, 59, 69, 210));
+        g.fillOval(centerX - 10, centerY - 10, 20, 20);
+        g.setColor(new Color(255, 250, 235));
+        g.setFont(new java.awt.Font(java.awt.Font.SANS_SERIF, java.awt.Font.BOLD, 12));
+        drawCenteredAt(g, String.valueOf(level), centerX, centerY + 4);
     }
 
     private static void drawCrate(Graphics2D g, Obstacle obstacle, int x, int y) {

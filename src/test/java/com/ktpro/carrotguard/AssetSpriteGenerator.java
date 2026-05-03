@@ -15,26 +15,40 @@ import java.nio.file.Path;
 
 public final class AssetSpriteGenerator {
     private static final int SIZE = 96;
+    private static final SpriteCrop[] SHEET_CROPS = {
+            new SpriteCrop(AssetKey.CARROT, 54, 96, 340, 474),
+            new SpriteCrop(AssetKey.TOWER_BASIC, 470, 168, 300, 405),
+            new SpriteCrop(AssetKey.TOWER_SLOW, 840, 166, 260, 407),
+            new SpriteCrop(AssetKey.TOWER_SPLASH, 1202, 164, 306, 410),
+            new SpriteCrop(AssetKey.ENEMY_NORMAL, 190, 668, 215, 240),
+            new SpriteCrop(AssetKey.ENEMY_FAST, 600, 642, 285, 250),
+            new SpriteCrop(AssetKey.ENEMY_TANK, 1060, 638, 282, 268)
+    };
 
     private AssetSpriteGenerator() {
     }
 
     public static void main(String[] args) {
         Path outputDirectory = args.length > 0 ? Path.of(args[0]) : Path.of("src/main/resources/assets");
+        Path sourceSheet = args.length > 1 ? Path.of(args[1]) : null;
         try {
             Files.createDirectories(outputDirectory);
             write(outputDirectory, AssetKey.GRASS, grassTile());
             write(outputDirectory, AssetKey.PATH, pathTile());
-            write(outputDirectory, AssetKey.CARROT, carrot());
-            write(outputDirectory, AssetKey.TOWER_BASIC, tower(new Color(34, 89, 150), new Color(23, 83, 121)));
-            write(outputDirectory, AssetKey.TOWER_SLOW, tower(new Color(20, 151, 167), new Color(42, 124, 129)));
-            write(outputDirectory, AssetKey.TOWER_SPLASH, tower(new Color(172, 76, 55), new Color(128, 53, 42)));
+            if (sourceSheet != null) {
+                importSheet(outputDirectory, sourceSheet);
+            } else {
+                write(outputDirectory, AssetKey.CARROT, carrot());
+                write(outputDirectory, AssetKey.TOWER_BASIC, tower(new Color(34, 89, 150), new Color(23, 83, 121)));
+                write(outputDirectory, AssetKey.TOWER_SLOW, tower(new Color(20, 151, 167), new Color(42, 124, 129)));
+                write(outputDirectory, AssetKey.TOWER_SPLASH, tower(new Color(172, 76, 55), new Color(128, 53, 42)));
+                write(outputDirectory, AssetKey.ENEMY_NORMAL, enemy(new Color(163, 75, 57), new Color(107, 42, 38), "N"));
+                write(outputDirectory, AssetKey.ENEMY_FAST, enemy(new Color(194, 103, 44), new Color(126, 61, 30), "F"));
+                write(outputDirectory, AssetKey.ENEMY_TANK, enemy(new Color(96, 92, 106), new Color(48, 45, 63), "T"));
+            }
             write(outputDirectory, AssetKey.PROJECTILE_BASIC, projectile(new Color(92, 164, 244), new Color(28, 82, 161)));
             write(outputDirectory, AssetKey.PROJECTILE_SLOW, projectile(new Color(63, 220, 225), new Color(13, 135, 154)));
             write(outputDirectory, AssetKey.PROJECTILE_SPLASH, projectile(new Color(255, 181, 82), new Color(172, 76, 55)));
-            write(outputDirectory, AssetKey.ENEMY_NORMAL, enemy(new Color(163, 75, 57), new Color(107, 42, 38), "N"));
-            write(outputDirectory, AssetKey.ENEMY_FAST, enemy(new Color(194, 103, 44), new Color(126, 61, 30), "F"));
-            write(outputDirectory, AssetKey.ENEMY_TANK, enemy(new Color(96, 92, 106), new Color(48, 45, 63), "T"));
             write(outputDirectory, AssetKey.OBSTACLE_CRATE, crate());
             write(outputDirectory, AssetKey.OBSTACLE_ROCK, rock());
             System.out.println("Generated PNG assets in " + outputDirectory.toAbsolutePath());
@@ -61,6 +75,110 @@ public final class AssetSpriteGenerator {
         }
         g.dispose();
         return image;
+    }
+
+    private static void importSheet(Path outputDirectory, Path sourceSheet) throws IOException {
+        BufferedImage sheet = ImageIO.read(sourceSheet.toFile());
+        if (sheet == null) {
+            throw new IOException("could not read source sheet " + sourceSheet);
+        }
+        for (SpriteCrop crop : SHEET_CROPS) {
+            BufferedImage sprite = sheet.getSubimage(crop.x(), crop.y(), crop.width(), crop.height());
+            write(outputDirectory, crop.key(), trimTransparent(chromaToAlpha(crop.key(), sprite)));
+        }
+    }
+
+    private static BufferedImage chromaToAlpha(AssetKey key, BufferedImage source) {
+        BufferedImage image = new BufferedImage(source.getWidth(), source.getHeight(), BufferedImage.TYPE_INT_ARGB);
+        for (int y = 0; y < source.getHeight(); y++) {
+            for (int x = 0; x < source.getWidth(); x++) {
+                int rgb = source.getRGB(x, y);
+                int red = (rgb >> 16) & 0xff;
+                int green = (rgb >> 8) & 0xff;
+                int blue = rgb & 0xff;
+                if (isGreenScreen(key, red, green, blue)) {
+                    image.setRGB(x, y, 0);
+                } else {
+                    image.setRGB(x, y, 0xff000000 | (rgb & 0x00ffffff));
+                }
+            }
+        }
+        removeGreenFringe(image);
+        return image;
+    }
+
+    private static void removeGreenFringe(BufferedImage image) {
+        int width = image.getWidth();
+        int height = image.getHeight();
+        for (int pass = 0; pass < 6; pass++) {
+            boolean changed = false;
+            boolean[] clear = new boolean[width * height];
+            for (int y = 1; y < height - 1; y++) {
+                for (int x = 1; x < width - 1; x++) {
+                    int argb = image.getRGB(x, y);
+                    if (((argb >>> 24) & 0xff) == 0 || !isGreenFringe(argb)) {
+                        continue;
+                    }
+                    if (isTransparent(image, x - 1, y) || isTransparent(image, x + 1, y)
+                            || isTransparent(image, x, y - 1) || isTransparent(image, x, y + 1)) {
+                        clear[y * width + x] = true;
+                        changed = true;
+                    }
+                }
+            }
+            if (!changed) {
+                return;
+            }
+            for (int i = 0; i < clear.length; i++) {
+                if (clear[i]) {
+                    image.setRGB(i % width, i / width, 0);
+                }
+            }
+        }
+    }
+
+    private static boolean isTransparent(BufferedImage image, int x, int y) {
+        return ((image.getRGB(x, y) >>> 24) & 0xff) == 0;
+    }
+
+    private static boolean isGreenFringe(int argb) {
+        int red = (argb >> 16) & 0xff;
+        int green = (argb >> 8) & 0xff;
+        int blue = argb & 0xff;
+        return green > 85 && green - Math.max(red, blue) > 35 && red < 105 && blue < 120;
+    }
+
+    private static boolean isGreenScreen(AssetKey key, int red, int green, int blue) {
+        if (key == AssetKey.ENEMY_TANK) {
+            return green > 80 && green - Math.max(red, blue) > 18 && red < 180 && blue < 170;
+        }
+        return green > 105 && green - Math.max(red, blue) > 50 && red < 130 && blue < 130;
+    }
+
+    private static BufferedImage trimTransparent(BufferedImage source) {
+        int minX = source.getWidth();
+        int minY = source.getHeight();
+        int maxX = -1;
+        int maxY = -1;
+        for (int y = 0; y < source.getHeight(); y++) {
+            for (int x = 0; x < source.getWidth(); x++) {
+                if (((source.getRGB(x, y) >>> 24) & 0xff) > 0) {
+                    minX = Math.min(minX, x);
+                    minY = Math.min(minY, y);
+                    maxX = Math.max(maxX, x);
+                    maxY = Math.max(maxY, y);
+                }
+            }
+        }
+        if (maxX < minX || maxY < minY) {
+            return source;
+        }
+        int padding = 3;
+        minX = Math.max(0, minX - padding);
+        minY = Math.max(0, minY - padding);
+        maxX = Math.min(source.getWidth() - 1, maxX + padding);
+        maxY = Math.min(source.getHeight() - 1, maxY + padding);
+        return source.getSubimage(minX, minY, maxX - minX + 1, maxY - minY + 1);
     }
 
     private static BufferedImage pathTile() {
@@ -225,5 +343,8 @@ public final class AssetSpriteGenerator {
                 Math.max(0, color.getBlue() - amount),
                 color.getAlpha()
         );
+    }
+
+    private record SpriteCrop(AssetKey key, int x, int y, int width, int height) {
     }
 }

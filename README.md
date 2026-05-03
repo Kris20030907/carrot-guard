@@ -62,14 +62,14 @@ java -cp target/classes:/tmp/carrot-guard-test-out com.ktpro.carrotguard.AssetSt
 
 ## 贴图资源
 
-PNG 素材放在 `src/main/resources/assets`。支持文件名见该目录下的 `README.md`。当前资源是一套原创占位贴图，后续可以用同名文件替换成更精细的手绘或 AI 辅助素材。缺少素材时游戏会自动使用 Java2D 绘制，不会影响运行。
+PNG 素材放在 `src/main/resources/assets`。支持文件名见该目录下的 `README.md`。当前资源是一套原创占位贴图，其中萝卜、炮塔和敌人来自 AI 辅助生成图裁切后的透明 PNG。后续可以用同名文件替换成更精细的手绘或 AI 辅助素材。缺少素材时游戏会自动使用 Java2D 绘制，不会影响运行。
 
 如果要重新生成当前占位贴图：
 
 ```bash
 mvn -q -DskipTests package
 javac -cp target/classes -d /tmp/carrot-guard-test-out $(find src/test/java -name "*.java")
-java -cp target/classes:/tmp/carrot-guard-test-out com.ktpro.carrotguard.AssetSpriteGenerator src/main/resources/assets
+java -cp target/classes:/tmp/carrot-guard-test-out com.ktpro.carrotguard.AssetSpriteGenerator src/main/resources/assets /path/to/source-sheet.png
 ```
 
 ## 关卡配置
