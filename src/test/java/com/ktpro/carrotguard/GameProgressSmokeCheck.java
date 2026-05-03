@@ -18,6 +18,7 @@ public final class GameProgressSmokeCheck {
 
         progress.recordVictory(1, 2, true);
         require(progress.isUnlocked(2), "winning level one should unlock level two");
+        require(!progress.isUnlocked(3), "level three should stay locked after winning level one");
         require(progress.getBestStars(1) == 2, "winning should store best stars");
 
         progress.recordVictory(1, 1, true);
@@ -25,9 +26,11 @@ public final class GameProgressSmokeCheck {
 
         progress.recordVictory(1, 3, true);
         require(progress.getBestStars(1) == 3, "higher stars should overwrite best stars");
+        progress.recordVictory(2, 1, true);
+        require(progress.isUnlocked(3), "winning level two should unlock level three");
 
         GameProgress reloaded = new GameProgress(savePath);
-        require(reloaded.isUnlocked(2), "unlocked level should survive reload");
+        require(reloaded.isUnlocked(3), "unlocked level should survive reload");
         require(reloaded.getBestStars(1) == 3, "best stars should survive reload");
 
         System.out.println("GameProgress smoke check passed");

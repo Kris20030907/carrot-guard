@@ -20,6 +20,9 @@ public final class GamePanelRenderCheck {
         if (!panel.isLevelUnlocked(1) || panel.isLevelUnlocked(2)) {
             throw new IllegalStateException("fresh progress should only unlock level one");
         }
+        if (panel.isLevelUnlocked(3)) {
+            throw new IllegalStateException("fresh progress should lock level three");
+        }
 
         BufferedImage image = new BufferedImage(GamePanel.WIDTH, GamePanel.HEIGHT, BufferedImage.TYPE_INT_ARGB);
         Graphics2D graphics = image.createGraphics();
@@ -35,9 +38,17 @@ public final class GamePanelRenderCheck {
         if (!panel.isLevelUnlocked(2) || panel.getBestStars(1) != 2) {
             throw new IllegalStateException("recorded progress should unlock level two and keep stars");
         }
+        if (panel.isLevelUnlocked(3)) {
+            throw new IllegalStateException("level three should stay locked until level two is won");
+        }
 
-        panel.startLevel(2);
-        if (panel.isShowingMenu() || panel.getCurrentLevelNumber() != 2) {
+        progress.recordVictory(2, 1, true);
+        if (!panel.isLevelUnlocked(3)) {
+            throw new IllegalStateException("recorded level two victory should unlock level three");
+        }
+
+        panel.startLevel(3);
+        if (panel.isShowingMenu() || panel.getCurrentLevelNumber() != 3) {
             throw new IllegalStateException("panel should enter a selected level");
         }
 

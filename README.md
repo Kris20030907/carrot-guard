@@ -13,7 +13,7 @@
 - 敌人沿固定路线移动
 - 点击空地后可选择建造普通、减速、范围三种炮塔
 - 普通、快速、重甲三种怪物
-- 两个资源配置关卡，每关包含 6 波敌人
+- 三个资源配置关卡，每关包含 6 波敌人
 - 关卡数据从 `src/main/resources/levels/level*.properties` 加载，并保留内置 fallback
 - 障碍物占用格子，清除后奖励金币并释放建造位置
 - 鼠标悬停地图时显示建造预览和攻击范围
@@ -56,7 +56,7 @@ java -cp target/classes:/tmp/carrot-guard-test-out com.ktpro.carrotguard.GamePro
 
 ## 关卡配置
 
-当前关卡配置在 `src/main/resources/levels/level1.properties` 和 `level2.properties`：
+当前关卡配置在 `src/main/resources/levels/level1.properties`、`level2.properties` 和 `level3.properties`：
 
 - `startingCoins` / `startingLives`：初始金币和生命
 - `path`：敌人路径格子，格式为 `col,row;col,row`
@@ -91,4 +91,4 @@ java -cp target/classes:/tmp/carrot-guard-test-out com.ktpro.carrotguard.GamePro
 ## 近期路线
 
 - 增加更多关卡、关卡选择和存档进度
-- 加入音效、贴图和主菜单
+- 加入音效、贴图和更多关卡事件

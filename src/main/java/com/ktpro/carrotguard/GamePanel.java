@@ -296,8 +296,31 @@ public final class GamePanel extends JPanel {
         g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 16));
         drawCentered(g, "Level Select", 143);
 
+        drawLevelRoute(g);
         for (int i = 0; i < levelNumbers.size(); i++) {
             drawLevelCard(g, i, levelNumbers.get(i));
+        }
+    }
+
+    private void drawLevelRoute(Graphics2D g) {
+        if (levelNumbers.size() < 2) {
+            return;
+        }
+        for (int i = 0; i < levelNumbers.size() - 1; i++) {
+            Rectangle from = levelCardRect(i, levelNumbers.size());
+            Rectangle to = levelCardRect(i + 1, levelNumbers.size());
+            int x1 = from.x + from.width / 2;
+            int y1 = from.y + from.height / 2;
+            int x2 = to.x + to.width / 2;
+            int y2 = to.y + to.height / 2;
+            boolean unlockedPath = progress.isUnlocked(levelNumbers.get(i + 1));
+
+            g.setStroke(new BasicStroke(12f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            g.setColor(unlockedPath ? new Color(221, 181, 103, 185) : new Color(101, 111, 94, 150));
+            g.drawLine(x1, y1, x2, y2);
+            g.setStroke(new BasicStroke(4f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            g.setColor(unlockedPath ? new Color(255, 235, 169, 190) : new Color(169, 176, 159, 160));
+            g.drawLine(x1, y1, x2, y2);
         }
     }
 
@@ -345,6 +368,9 @@ public final class GamePanel extends JPanel {
         int gridWidth = columns * cardWidth + (columns - 1) * gap;
         int x = (WIDTH - gridWidth) / 2 + col * (cardWidth + gap);
         int y = 220 + row * (cardHeight + gap);
+        if (columns > 1 && row == 0 && (col & 1) == 1) {
+            y += 58;
+        }
         return new Rectangle(x, y, cardWidth, cardHeight);
     }
 

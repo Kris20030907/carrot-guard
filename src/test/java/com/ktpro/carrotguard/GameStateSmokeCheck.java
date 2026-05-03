@@ -100,9 +100,10 @@ public final class GameStateSmokeCheck {
         require(config.getObstacles().size() == 6, "resource level should define six obstacles");
         require(config.getPath().hasOnlyOrthogonalSteps(), "resource path should be orthogonal");
         require(config.getPath().containsTile(5, 4), "resource path should include the first turn connector");
-        require(LevelConfig.availableLevelNumbers().size() >= 2, "level select should discover configured levels");
+        require(LevelConfig.availableLevelNumbers().size() >= 3, "level select should discover configured levels");
         require(LevelConfig.availableLevelNumbers().contains(1), "available levels should include level one");
         require(LevelConfig.availableLevelNumbers().contains(2), "available levels should include level two");
+        require(LevelConfig.availableLevelNumbers().contains(3), "available levels should include level three");
         require(LevelConfig.hasLevel(2), "second level resource should be available");
         LevelConfig secondLevel = LevelConfig.load(2);
         require(secondLevel.getLevelNumber() == 2, "second level should report its level number");
@@ -110,6 +111,13 @@ public final class GameStateSmokeCheck {
         require(secondLevel.getWaveCount() == 6, "second level should define six waves");
         require(secondLevel.getPath().hasOnlyOrthogonalSteps(), "second level path should be orthogonal");
         require(secondLevel.getObstacles().size() == 7, "second level should define seven obstacles");
+        require(LevelConfig.hasLevel(3), "third level resource should be available");
+        LevelConfig thirdLevel = LevelConfig.load(3);
+        require(thirdLevel.getLevelNumber() == 3, "third level should report its level number");
+        require(thirdLevel.getStartingCoins() == 200, "third level should define starting coins");
+        require(thirdLevel.getWaveCount() == 6, "third level should define six waves");
+        require(thirdLevel.getPath().hasOnlyOrthogonalSteps(), "third level path should be orthogonal");
+        require(thirdLevel.getObstacles().size() == 8, "third level should define eight obstacles");
     }
 
     private static void verifyTowerUpgradeStats() {
@@ -159,6 +167,7 @@ public final class GameStateSmokeCheck {
     private static void verifyEnemiesCanReachGoalOnConfiguredLevels() {
         verifyEnemyReachesGoalAtCarrot(LevelConfig.load(1));
         verifyEnemyReachesGoalAtCarrot(LevelConfig.load(2));
+        verifyEnemyReachesGoalAtCarrot(LevelConfig.load(3));
     }
 
     private static void verifyEnemyReachesGoalAtCarrot(LevelConfig config) {
