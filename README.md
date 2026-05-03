@@ -7,6 +7,7 @@
 - Java 17
 - Swing / Java2D 渲染
 - Maven 项目结构
+- 轻量 Java2D 美术层，集中绘制地图、萝卜、炮塔、敌人、障碍物和投射物
 - 敌人沿固定路线移动
 - 点击空地后可选择建造普通、减速、范围三种炮塔
 - 普通、快速、重甲三种怪物
@@ -47,6 +48,7 @@ java -cp out com.ktpro.carrotguard.Main
 mvn -q -DskipTests package
 javac -cp target/classes -d /tmp/carrot-guard-test-out $(find src/test/java -name "*.java")
 java -cp target/classes:/tmp/carrot-guard-test-out com.ktpro.carrotguard.GameStateSmokeCheck
+java -cp target/classes:/tmp/carrot-guard-test-out com.ktpro.carrotguard.GamePanelRenderCheck
 ```
 
 ## 关卡配置

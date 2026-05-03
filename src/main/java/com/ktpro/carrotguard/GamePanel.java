@@ -232,29 +232,20 @@ public final class GamePanel extends JPanel {
                 int x = col * TILE_SIZE;
                 int y = top + row * TILE_SIZE;
                 boolean path = state.getPath().containsTile(col, row);
-                g.setColor(path ? new Color(211, 178, 119) : new Color(133, 184, 113));
-                g.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-                g.setColor(path ? new Color(181, 147, 93) : new Color(108, 157, 93));
-                g.drawRect(x, y, TILE_SIZE, TILE_SIZE);
+                if (path) {
+                    GameArt.drawPathTile(g, x, y, col, row);
+                } else {
+                    GameArt.drawGrassTile(g, x, y, col, row);
+                }
             }
         }
 
-        g.setStroke(new BasicStroke(4f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-        g.setColor(new Color(238, 211, 153));
-        state.getPath().draw(g, HUD_HEIGHT);
+        GameArt.drawPathRibbon(g, state.getPath());
 
         int[] goal = state.getPath().getGoalTile();
         int carrotX = goal[0] * TILE_SIZE + TILE_SIZE / 2;
         int carrotY = HUD_HEIGHT + goal[1] * TILE_SIZE + TILE_SIZE / 2;
-        g.setColor(new Color(255, 145, 63));
-        g.fillOval(carrotX - 16, carrotY - 18, 32, 38);
-        g.setColor(new Color(76, 151, 69));
-        g.fillOval(carrotX - 6, carrotY - 29, 18, 16);
-        if (state.isCarrotSelected()) {
-            g.setColor(new Color(255, 246, 164, 120));
-            g.setStroke(new BasicStroke(3f));
-            g.drawOval(carrotX - 22, carrotY - 26, 44, 52);
-        }
+        GameArt.drawCarrot(g, carrotX, carrotY, state.isCarrotSelected());
         drawCarrotHealthBar(g, carrotX, carrotY);
     }
 
@@ -263,10 +254,7 @@ public final class GamePanel extends JPanel {
         int barHeight = 7;
         int x = carrotX - barWidth / 2;
         int y = carrotY + 28;
-        g.setColor(new Color(73, 43, 35));
-        g.fillRoundRect(x, y, barWidth, barHeight, 5, 5);
-        g.setColor(state.getLifeRatio() > 0.35 ? new Color(97, 201, 98) : new Color(232, 88, 74));
-        g.fillRoundRect(x, y, (int) (barWidth * state.getLifeRatio()), barHeight, 5, 5);
+        GameArt.drawHealthBar(g, x, y, barWidth, barHeight, state.getLifeRatio(), GameArt.healthColor(state.getLifeRatio()));
         g.setColor(new Color(255, 250, 235));
         g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 10));
         drawCenteredAt(g, state.getLives() + "/" + state.getMaxLives(), carrotX, y - 3);
@@ -586,20 +574,7 @@ public final class GamePanel extends JPanel {
 
     private void drawEntities(Graphics2D g) {
         for (Obstacle obstacle : state.getObstacles()) {
-            int x = (int) obstacle.getX();
-            int y = (int) obstacle.getY();
-            g.setColor(obstacle.getBodyColor());
-            g.fillRoundRect(x - 16, y - 16, 32, 32, 8, 8);
-            g.setColor(obstacle.getBorderColor());
-            g.setStroke(new BasicStroke(3f));
-            g.drawRoundRect(x - 16, y - 16, 32, 32, 8, 8);
-
-            int barWidth = 34;
-            int healthWidth = (int) (barWidth * obstacle.getHealthRatio());
-            g.setColor(new Color(73, 43, 35));
-            g.fillRect(x - barWidth / 2, y - 27, barWidth, 5);
-            g.setColor(new Color(247, 197, 74));
-            g.fillRect(x - barWidth / 2, y - 27, healthWidth, 5);
+            GameArt.drawObstacle(g, obstacle);
         }
 
         for (Tower tower : state.getTowers()) {
@@ -617,21 +592,11 @@ public final class GamePanel extends JPanel {
                 g.drawOval(centerX - glow, centerY - glow, glow * 2, glow * 2);
             }
 
-            g.setColor(tower == state.getSelectedTower() ? tower.getType().getBodyColor().brighter() : tower.getType().getBodyColor());
-            g.fillOval(centerX - 17, centerY - 17, 34, 34);
-            g.setColor(tower.getType().getBarrelColor());
-            g.fillRect(centerX - 4, centerY - 28, 8, 22);
-            g.setColor(new Color(255, 250, 235));
-            g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
-            drawCenteredAt(g, String.valueOf(tower.getLevel()), centerX, centerY + 5);
+            GameArt.drawTower(g, tower, centerX, centerY, tower == state.getSelectedTower());
         }
 
         for (Projectile projectile : state.getProjectiles()) {
-            int size = projectile.getTowerType().hasSplashEffect() ? 13 : 10;
-            g.setColor(projectile.getTowerType().getBodyColor().brighter());
-            g.fillOval((int) projectile.getX() - size / 2, (int) projectile.getY() - size / 2, size, size);
-            g.setColor(projectile.getTowerType().getBarrelColor());
-            g.drawOval((int) projectile.getX() - size / 2, (int) projectile.getY() - size / 2, size, size);
+            GameArt.drawProjectile(g, projectile);
         }
 
         for (HitEffect effect : state.getHitEffects()) {
@@ -653,27 +618,7 @@ public final class GamePanel extends JPanel {
         }
 
         for (Enemy enemy : state.getEnemies()) {
-            int x = (int) enemy.getX();
-            int y = (int) enemy.getY();
-            int radius = enemy.getType().getRadius();
-            g.setColor(enemy.getType().getBodyColor());
-            g.fillOval(x - radius, y - radius, radius * 2, radius * 2);
-            g.setColor(enemy.getType().getBorderColor());
-            g.drawOval(x - radius, y - radius, radius * 2, radius * 2);
-            if (enemy.isSlowed()) {
-                g.setColor(new Color(148, 222, 233, 160));
-                g.drawOval(x - radius - 4, y - radius - 4, (radius + 4) * 2, (radius + 4) * 2);
-            }
-            g.setColor(new Color(255, 250, 235));
-            g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 10));
-            drawCenteredAt(g, enemy.getType().getDisplayName().substring(0, 1), x, y + 4);
-
-            int barWidth = radius * 2 + 4;
-            int healthWidth = (int) (barWidth * enemy.getHealthRatio());
-            g.setColor(new Color(73, 43, 35));
-            g.fillRect(x - barWidth / 2, y - radius - 10, barWidth, 5);
-            g.setColor(new Color(97, 201, 98));
-            g.fillRect(x - barWidth / 2, y - radius - 10, healthWidth, 5);
+            GameArt.drawEnemy(g, enemy);
         }
     }
 
