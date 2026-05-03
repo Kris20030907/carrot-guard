@@ -1,5 +1,6 @@
 package com.ktpro.carrotguard;
 
+import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -13,6 +14,7 @@ public final class GameState {
     private final List<Tower> towers = new ArrayList<>();
     private final List<Projectile> projectiles = new ArrayList<>();
     private final List<HitEffect> hitEffects = new ArrayList<>();
+    private final List<FloatingText> floatingTexts = new ArrayList<>();
 
     private LevelConfig config;
     private GamePath path;
@@ -29,6 +31,7 @@ public final class GameState {
     private boolean gameOver;
     private boolean won;
     private boolean paused;
+    private boolean carrotSelected;
 
     public GameState() {
         loadLevel(1);
@@ -39,11 +42,12 @@ public final class GameState {
             return;
         }
 
+        updateHitEffects(deltaSeconds);
+        updateFloatingTexts(deltaSeconds);
         spawnEnemies(deltaSeconds);
         updateEnemies(deltaSeconds);
         updateTowers(deltaSeconds);
         updateProjectiles(deltaSeconds);
-        updateHitEffects(deltaSeconds);
         checkWaveFinished();
     }
 
@@ -51,6 +55,13 @@ public final class GameState {
         if (gameOver || won || col < 0 || row < 0 || col >= GamePanel.COLS || row >= GamePanel.ROWS) {
             return false;
         }
+        if (isGoalTile(col, row)) {
+            carrotSelected = true;
+            selectedTower = null;
+            clearSelectedBuildTile();
+            return true;
+        }
+        carrotSelected = false;
         Tower existing = findTower(col, row);
         if (existing != null) {
             selectedTower = existing;
@@ -145,7 +156,9 @@ public final class GameState {
         towers.clear();
         projectiles.clear();
         hitEffects.clear();
+        floatingTexts.clear();
         selectedTower = null;
+        carrotSelected = false;
         clearSelectedBuildTile();
         coins = config.getStartingCoins();
         lives = config.getStartingLives();
@@ -218,12 +231,32 @@ public final class GameState {
             enemy.update(deltaSeconds);
             if (enemy.hasReachedGoal()) {
                 iterator.remove();
-                lives -= enemy.getLifeDamage();
+                int damage = enemy.getLifeDamage();
+                lives -= damage;
+                addCarrotDamageFeedback(damage);
                 if (lives <= 0) {
                     gameOver = true;
                 }
             }
         }
+    }
+
+    private void updateFloatingTexts(double deltaSeconds) {
+        Iterator<FloatingText> iterator = floatingTexts.iterator();
+        while (iterator.hasNext()) {
+            FloatingText text = iterator.next();
+            text.update(deltaSeconds);
+            if (text.isExpired()) {
+                iterator.remove();
+            }
+        }
+    }
+
+    private void addCarrotDamageFeedback(int damage) {
+        int[] goal = path.getGoalTile();
+        double x = goal[0] * GamePanel.TILE_SIZE + GamePanel.TILE_SIZE / 2.0;
+        double y = GamePanel.HUD_HEIGHT + goal[1] * GamePanel.TILE_SIZE + GamePanel.TILE_SIZE / 2.0 - 28;
+        floatingTexts.add(new FloatingText(x, y, "-" + damage, new Color(255, 104, 87)));
     }
 
     private void updateTowers(double deltaSeconds) {
@@ -367,6 +400,11 @@ public final class GameState {
         selectedBuildRow = -1;
     }
 
+    public boolean isGoalTile(int col, int row) {
+        int[] goal = path.getGoalTile();
+        return goal[0] == col && goal[1] == row;
+    }
+
     public GamePath getPath() {
         return path;
     }
@@ -389,6 +427,10 @@ public final class GameState {
 
     public List<HitEffect> getHitEffects() {
         return hitEffects;
+    }
+
+    public List<FloatingText> getFloatingTexts() {
+        return floatingTexts;
     }
 
     public Tower getSelectedTower() {
@@ -417,6 +459,18 @@ public final class GameState {
 
     public int getLives() {
         return lives;
+    }
+
+    public int getMaxLives() {
+        return config.getStartingLives();
+    }
+
+    public double getLifeRatio() {
+        return Math.max(0.0, lives / (double) config.getStartingLives());
+    }
+
+    public boolean isCarrotSelected() {
+        return carrotSelected;
     }
 
     public int getWave() {

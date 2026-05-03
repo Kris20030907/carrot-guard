@@ -17,6 +17,9 @@ public final class GameStateSmokeCheck {
         verifySpeedMultiplierCycle(state);
         state.cycleSpeedMultiplier();
         require(state.getSpeedMultiplier() == 2.0, "speed test should move state away from default");
+        int[] goalTile = state.getPath().getGoalTile();
+        require(state.selectMapTile(goalTile[0], goalTile[1]), "carrot tile should be selectable");
+        require(state.isCarrotSelected(), "clicking carrot should select carrot info");
         require(state.hasNextLevel(), "level one should have a next level available");
         require(!state.advanceToNextLevel(), "next level should require victory");
         require(state.canBuildTowerAt(1, 2, TowerType.BASIC), "empty grass tile should be buildable");
@@ -164,5 +167,6 @@ public final class GameStateSmokeCheck {
         }
         require(state.isGameOver(), "enough leaked enemies should end the game");
         require(state.getLives() <= 0, "game over from leaks should exhaust lives");
+        require(!state.getFloatingTexts().isEmpty(), "leaked enemies should create carrot damage text");
     }
 }

@@ -72,6 +72,9 @@ public final class GamePanel extends JPanel {
         if (selectedTower != null && towerInfoPanelRect(selectedTower).contains(x, y)) {
             return;
         }
+        if (state.isCarrotSelected() && carrotInfoPanelRect().contains(x, y)) {
+            return;
+        }
         if (y < HUD_HEIGHT) {
             if (speedButton.contains(x, y)) {
                 state.cycleSpeedMultiplier();
@@ -162,6 +165,7 @@ public final class GamePanel extends JPanel {
         drawBuildPreview(g);
         drawEntities(g);
         drawTowerInfoPanel(g);
+        drawCarrotInfoPanel(g);
         drawContextMenu(g);
         drawOverlay(g);
         g.dispose();
@@ -246,6 +250,26 @@ public final class GamePanel extends JPanel {
         g.fillOval(carrotX - 16, carrotY - 18, 32, 38);
         g.setColor(new Color(76, 151, 69));
         g.fillOval(carrotX - 6, carrotY - 29, 18, 16);
+        if (state.isCarrotSelected()) {
+            g.setColor(new Color(255, 246, 164, 120));
+            g.setStroke(new BasicStroke(3f));
+            g.drawOval(carrotX - 22, carrotY - 26, 44, 52);
+        }
+        drawCarrotHealthBar(g, carrotX, carrotY);
+    }
+
+    private void drawCarrotHealthBar(Graphics2D g, int carrotX, int carrotY) {
+        int barWidth = 52;
+        int barHeight = 7;
+        int x = carrotX - barWidth / 2;
+        int y = carrotY + 28;
+        g.setColor(new Color(73, 43, 35));
+        g.fillRoundRect(x, y, barWidth, barHeight, 5, 5);
+        g.setColor(state.getLifeRatio() > 0.35 ? new Color(97, 201, 98) : new Color(232, 88, 74));
+        g.fillRoundRect(x, y, (int) (barWidth * state.getLifeRatio()), barHeight, 5, 5);
+        g.setColor(new Color(255, 250, 235));
+        g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 10));
+        drawCenteredAt(g, state.getLives() + "/" + state.getMaxLives(), carrotX, y - 3);
     }
 
     private void drawBuildPreview(Graphics2D g) {
@@ -359,6 +383,32 @@ public final class GamePanel extends JPanel {
         drawContextButton(g, sellOptionRect(), "Sell", String.valueOf(selectedTower.getSellValue()), true, new Color(238, 197, 92));
     }
 
+    private void drawCarrotInfoPanel(Graphics2D g) {
+        if (!state.isCarrotSelected()) {
+            return;
+        }
+        Rectangle rect = carrotInfoPanelRect();
+        g.setColor(new Color(47, 68, 55, 232));
+        g.fillRoundRect(rect.x, rect.y, rect.width, rect.height, 8, 8);
+        g.setColor(new Color(255, 250, 235, 190));
+        g.setStroke(new BasicStroke(2f));
+        g.drawRoundRect(rect.x, rect.y, rect.width, rect.height, 8, 8);
+
+        int left = rect.x + 12;
+        g.setColor(new Color(255, 250, 235));
+        g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
+        g.drawString("Carrot HP", left, rect.y + 22);
+        g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
+        g.drawString(state.getLives() + " / " + state.getMaxLives(), left, rect.y + 45);
+
+        int barWidth = rect.width - 24;
+        int barY = rect.y + 58;
+        g.setColor(new Color(73, 43, 35));
+        g.fillRoundRect(left, barY, barWidth, 8, 6, 6);
+        g.setColor(state.getLifeRatio() > 0.35 ? new Color(97, 201, 98) : new Color(232, 88, 74));
+        g.fillRoundRect(left, barY, (int) (barWidth * state.getLifeRatio()), 8, 6, 6);
+    }
+
     private void drawTowerInfoPanel(Graphics2D g) {
         Tower tower = state.getSelectedTower();
         if (tower == null) {
@@ -448,6 +498,30 @@ public final class GamePanel extends JPanel {
             double centerX = candidate.getCenterX();
             double centerY = candidate.getCenterY();
             double score = Math.hypot(centerX - towerX, centerY - towerY);
+            if (score > bestScore) {
+                best = candidate;
+                bestScore = score;
+            }
+        }
+        return best;
+    }
+
+    private Rectangle carrotInfoPanelRect() {
+        int[] goal = state.getPath().getGoalTile();
+        int width = 150;
+        int height = 82;
+        Rectangle[] candidates = {
+                new Rectangle(10, HUD_HEIGHT + 10, width, height),
+                new Rectangle(WIDTH - width - 10, HUD_HEIGHT + 10, width, height),
+                new Rectangle(10, HEIGHT - height - 10, width, height),
+                new Rectangle(WIDTH - width - 10, HEIGHT - height - 10, width, height)
+        };
+        double carrotX = goal[0] * TILE_SIZE + TILE_SIZE / 2.0;
+        double carrotY = HUD_HEIGHT + goal[1] * TILE_SIZE + TILE_SIZE / 2.0;
+        Rectangle best = candidates[0];
+        double bestScore = -1;
+        for (Rectangle candidate : candidates) {
+            double score = Math.hypot(candidate.getCenterX() - carrotX, candidate.getCenterY() - carrotY);
             if (score > bestScore) {
                 best = candidate;
                 bestScore = score;
@@ -568,6 +642,14 @@ public final class GamePanel extends JPanel {
             g.setColor(new Color(effectColor.getRed(), effectColor.getGreen(), effectColor.getBlue(), alpha));
             g.setStroke(new BasicStroke(effect.getTowerType().hasSplashEffect() ? 3f : 2f));
             g.drawOval((int) effect.getX() - radius, (int) effect.getY() - radius, radius * 2, radius * 2);
+        }
+
+        for (FloatingText text : state.getFloatingTexts()) {
+            int alpha = Math.max(0, (int) (255 * (1.0 - text.getProgress())));
+            Color color = text.getColor();
+            g.setColor(new Color(color.getRed(), color.getGreen(), color.getBlue(), alpha));
+            g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 15));
+            drawCenteredAt(g, text.getText(), (int) text.getX(), (int) text.getY());
         }
 
         for (Enemy enemy : state.getEnemies()) {
