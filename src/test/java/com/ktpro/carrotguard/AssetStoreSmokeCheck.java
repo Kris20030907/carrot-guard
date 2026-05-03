@@ -15,6 +15,9 @@ public final class AssetStoreSmokeCheck {
     public static void main(String[] args) {
         AssetStore defaultStore = AssetStore.loadDefault();
         require(defaultStore != null, "default asset store should be constructable");
+        for (AssetKey key : AssetKey.values()) {
+            require(defaultStore.hasAsset(key), "default asset pack should include " + key.getFileName());
+        }
 
         Path directory = tempAssetDirectory();
         writePng(directory.resolve(AssetKey.CARROT.getFileName()));

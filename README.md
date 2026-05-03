@@ -9,6 +9,7 @@
 - Maven 项目结构
 - 轻量 Java2D 美术层，集中绘制地图、萝卜、炮塔、敌人、障碍物和投射物
 - 可选 PNG 贴图加载器，从 `src/main/resources/assets` 读取素材并保留 Java2D 兜底
+- 内置第一批原创 PNG 占位贴图，覆盖地块、萝卜、炮塔、子弹、敌人和障碍物
 - 主菜单和关卡选择界面
 - 本地进度存档，记录关卡解锁状态和每关最高星级
 - 代码生成的轻量音效系统，覆盖按钮、建造、升级、命中、漏怪和结算
@@ -61,7 +62,15 @@ java -cp target/classes:/tmp/carrot-guard-test-out com.ktpro.carrotguard.AssetSt
 
 ## 贴图资源
 
-可选 PNG 素材放在 `src/main/resources/assets`。支持文件名见该目录下的 `README.md`。缺少素材时游戏会自动使用 Java2D 绘制，不会影响运行。
+PNG 素材放在 `src/main/resources/assets`。支持文件名见该目录下的 `README.md`。当前资源是一套原创占位贴图，后续可以用同名文件替换成更精细的手绘或 AI 辅助素材。缺少素材时游戏会自动使用 Java2D 绘制，不会影响运行。
+
+如果要重新生成当前占位贴图：
+
+```bash
+mvn -q -DskipTests package
+javac -cp target/classes -d /tmp/carrot-guard-test-out $(find src/test/java -name "*.java")
+java -cp target/classes:/tmp/carrot-guard-test-out com.ktpro.carrotguard.AssetSpriteGenerator src/main/resources/assets
+```
 
 ## 关卡配置
 
