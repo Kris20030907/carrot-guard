@@ -51,6 +51,8 @@ public final class GamePanel extends JPanel {
     private int observedHitEvents;
     private int observedLeakEvents;
     private int observedClearedObstacleEvents;
+    private double animationSeconds;
+    private double carrotHitFlash;
     private boolean victoryRecorded;
 
     public GamePanel() {
@@ -270,10 +272,13 @@ public final class GamePanel extends JPanel {
         long now = System.nanoTime();
         double deltaSeconds = (now - lastFrameNanos) / 1_000_000_000.0;
         lastFrameNanos = now;
+        double frameSeconds = Math.min(deltaSeconds, 0.05);
+        animationSeconds += frameSeconds;
+        carrotHitFlash = Math.max(0, carrotHitFlash - frameSeconds);
         if (screen == PanelScreen.PLAYING) {
             boolean wasWon = state.isWon();
             boolean wasGameOver = state.isGameOver();
-            state.update(Math.min(deltaSeconds, 0.05) * state.getSpeedMultiplier());
+            state.update(frameSeconds * state.getSpeedMultiplier());
             playStateSounds();
             if (!wasWon && state.isWon()) {
                 recordVictoryIfNeeded();
@@ -383,6 +388,7 @@ public final class GamePanel extends JPanel {
         }
         if (state.getLeakEventCount() > observedLeakEvents) {
             soundEffects.play(SoundEffect.LEAK);
+            carrotHitFlash = 0.34;
             observedLeakEvents = state.getLeakEventCount();
         }
         if (state.getClearedObstacleEventCount() > observedClearedObstacleEvents) {
@@ -635,7 +641,7 @@ public final class GamePanel extends JPanel {
         int[] goal = state.getPath().getGoalTile();
         int carrotX = goal[0] * TILE_SIZE + TILE_SIZE / 2;
         int carrotY = HUD_HEIGHT + goal[1] * TILE_SIZE + TILE_SIZE / 2;
-        GameArt.drawCarrot(g, assets, carrotX, carrotY, state.isCarrotSelected());
+        GameArt.drawCarrot(g, assets, carrotX, carrotY, state.isCarrotSelected(), carrotHitFlash);
         drawCarrotHealthBar(g, carrotX, carrotY);
     }
 
@@ -982,11 +988,11 @@ public final class GamePanel extends JPanel {
                 g.drawOval(centerX - glow, centerY - glow, glow * 2, glow * 2);
             }
 
-            GameArt.drawTower(g, assets, tower, centerX, centerY, tower == state.getSelectedTower());
+            GameArt.drawTower(g, assets, tower, centerX, centerY, tower == state.getSelectedTower(), animationSeconds);
         }
 
         for (Projectile projectile : state.getProjectiles()) {
-            GameArt.drawProjectile(g, assets, projectile);
+            GameArt.drawProjectile(g, assets, projectile, animationSeconds);
         }
 
         for (HitEffect effect : state.getHitEffects()) {
@@ -997,6 +1003,12 @@ public final class GamePanel extends JPanel {
             g.setColor(new Color(effectColor.getRed(), effectColor.getGreen(), effectColor.getBlue(), alpha));
             g.setStroke(new BasicStroke(effect.getTowerType().hasSplashEffect() ? 3f : 2f));
             g.drawOval((int) effect.getX() - radius, (int) effect.getY() - radius, radius * 2, radius * 2);
+            int spark = Math.max(3, (int) (10 * (1.0 - progress)));
+            g.setColor(new Color(255, 250, 205, Math.min(220, alpha + 55)));
+            g.fillOval((int) effect.getX() - spark / 2, (int) effect.getY() - spark / 2, spark, spark);
+            g.setStroke(new BasicStroke(2f));
+            g.drawLine((int) effect.getX() - spark, (int) effect.getY(), (int) effect.getX() + spark, (int) effect.getY());
+            g.drawLine((int) effect.getX(), (int) effect.getY() - spark, (int) effect.getX(), (int) effect.getY() + spark);
         }
 
         for (FloatingText text : state.getFloatingTexts()) {
@@ -1008,7 +1020,7 @@ public final class GamePanel extends JPanel {
         }
 
         for (Enemy enemy : state.getEnemies()) {
-            GameArt.drawEnemy(g, assets, enemy);
+            GameArt.drawEnemy(g, assets, enemy, animationSeconds);
         }
     }
 

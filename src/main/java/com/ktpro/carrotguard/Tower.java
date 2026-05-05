@@ -15,6 +15,7 @@ public final class Tower {
     private int rangeLevel;
     private double cooldown;
     private double upgradePulse;
+    private double firePulse;
 
     public Tower(int col, int row, TowerType type) {
         this.type = type;
@@ -27,6 +28,7 @@ public final class Tower {
     public void update(double deltaSeconds) {
         cooldown = Math.max(0, cooldown - deltaSeconds);
         upgradePulse = Math.max(0, upgradePulse - deltaSeconds);
+        firePulse = Math.max(0, firePulse - deltaSeconds);
     }
 
     public Enemy findTarget(List<Enemy> enemies) {
@@ -67,6 +69,7 @@ public final class Tower {
 
     public Projectile fireAt(Target target) {
         cooldown = getFireInterval();
+        firePulse = 0.16;
         return new Projectile(x, y, target, getDamage(), type, type.getProjectileSpeed());
     }
 
@@ -153,5 +156,9 @@ public final class Tower {
 
     public double getUpgradePulse() {
         return upgradePulse;
+    }
+
+    public double getFirePulse() {
+        return firePulse;
     }
 }

@@ -74,10 +74,11 @@ final class GameArt {
         path.draw(g, GamePanel.HUD_HEIGHT);
     }
 
-    static void drawCarrot(Graphics2D g, AssetStore assets, int centerX, int centerY, boolean selected) {
+    static void drawCarrot(Graphics2D g, AssetStore assets, int centerX, int centerY, boolean selected, double hitFlash) {
         g.setColor(new Color(80, 48, 33, 84));
         g.fillOval(centerX - 21, centerY + 12, 42, 13);
         if (assets.draw(g, AssetKey.CARROT, centerX - 37, centerY - 53, 74, 96)) {
+            drawCarrotHitFlash(g, centerX, centerY, hitFlash);
             if (selected) {
                 g.setColor(new Color(255, 246, 164, 130));
                 g.setStroke(new BasicStroke(3f));
@@ -101,6 +102,7 @@ final class GameArt {
 
         g.setColor(new Color(255, 222, 137, 135));
         g.fillOval(centerX - 9, centerY - 12, 8, 16);
+        drawCarrotHitFlash(g, centerX, centerY, hitFlash);
         if (selected) {
             g.setColor(new Color(255, 246, 164, 130));
             g.setStroke(new BasicStroke(3f));
@@ -124,44 +126,52 @@ final class GameArt {
         drawHealthBar(g, x - 18, y - 30, 36, 6, obstacle.getHealthRatio(), new Color(247, 197, 74));
     }
 
-    static void drawTower(Graphics2D g, AssetStore assets, Tower tower, int centerX, int centerY, boolean selected) {
+    static void drawTower(Graphics2D g, AssetStore assets, Tower tower, int centerX, int centerY, boolean selected, double animationSeconds) {
         drawShadow(g, centerX, centerY + 17, 41, 12);
         if (selected) {
             g.setColor(new Color(255, 246, 164, 85));
             g.fillOval(centerX - 25, centerY - 25, 50, 50);
         }
 
-        if (assets.draw(g, towerAssetKey(tower.getType()), centerX - 30, centerY - 43, 60, 76)) {
-            drawTowerLevelBadge(g, tower.getLevel(), centerX + 18, centerY - 24);
+        int recoil = (int) Math.round(5 * Math.min(1.0, tower.getFirePulse() / 0.16));
+        int drawY = centerY - 43 + recoil;
+        if (assets.draw(g, towerAssetKey(tower.getType()), centerX - 30, drawY, 60, 76)) {
+            drawMuzzleFlash(g, tower, centerX, centerY + recoil, animationSeconds);
+            drawTowerLevelBadge(g, tower.getLevel(), centerX + 18, centerY - 24 + recoil);
             return;
         }
 
-        g.setPaint(new GradientPaint(centerX - 19, centerY - 19, brighten(tower.getType().getBodyColor(), selected ? 38 : 24),
-                centerX + 18, centerY + 20, darken(tower.getType().getBodyColor(), 26)));
-        g.fillOval(centerX - 18, centerY - 16, 36, 35);
+        int bodyY = centerY + recoil;
+        g.setPaint(new GradientPaint(centerX - 19, bodyY - 19, brighten(tower.getType().getBodyColor(), selected ? 38 : 24),
+                centerX + 18, bodyY + 20, darken(tower.getType().getBodyColor(), 26)));
+        g.fillOval(centerX - 18, bodyY - 16, 36, 35);
         g.setColor(darken(tower.getType().getBarrelColor(), 8));
         g.setStroke(new BasicStroke(3f));
-        g.drawOval(centerX - 18, centerY - 16, 36, 35);
+        g.drawOval(centerX - 18, bodyY - 16, 36, 35);
 
         if (tower.getType() == TowerType.SLOW) {
-            drawSlowTowerTop(g, tower, centerX, centerY);
+            drawSlowTowerTop(g, tower, centerX, bodyY);
         } else if (tower.getType() == TowerType.SPLASH) {
-            drawSplashTowerTop(g, tower, centerX, centerY);
+            drawSplashTowerTop(g, tower, centerX, bodyY);
         } else {
-            drawBasicTowerTop(g, tower, centerX, centerY);
+            drawBasicTowerTop(g, tower, centerX, bodyY);
         }
+        drawMuzzleFlash(g, tower, centerX, bodyY, animationSeconds);
 
         g.setColor(CREAM);
         g.setFont(new java.awt.Font(java.awt.Font.SANS_SERIF, java.awt.Font.BOLD, 12));
-        drawCenteredAt(g, String.valueOf(tower.getLevel()), centerX, centerY + 7);
+        drawCenteredAt(g, String.valueOf(tower.getLevel()), centerX, bodyY + 7);
     }
 
-    static void drawProjectile(Graphics2D g, AssetStore assets, Projectile projectile) {
+    static void drawProjectile(Graphics2D g, AssetStore assets, Projectile projectile, double animationSeconds) {
         int x = (int) projectile.getX();
         int y = (int) projectile.getY();
         int size = projectile.getTowerType().hasSplashEffect() ? 13 : 10;
+        drawProjectileTrail(g, projectile, size);
         drawShadow(g, x, y + 4, size + 4, 5);
-        if (assets.draw(g, projectileAssetKey(projectile.getTowerType()), x - size, y - size, size * 2, size * 2)) {
+        int pulse = (int) Math.round(2 * Math.sin(animationSeconds * 18 + projectile.getAge() * 8));
+        if (assets.draw(g, projectileAssetKey(projectile.getTowerType()), x - size - pulse / 2, y - size - pulse / 2,
+                size * 2 + pulse, size * 2 + pulse)) {
             return;
         }
         g.setPaint(new GradientPaint(x - size / 2, y - size / 2, brighten(projectile.getTowerType().getBodyColor(), 48),
@@ -171,14 +181,18 @@ final class GameArt {
         g.fillOval(x - size / 4, y - size / 3, Math.max(3, size / 3), Math.max(3, size / 3));
     }
 
-    static void drawEnemy(Graphics2D g, AssetStore assets, Enemy enemy) {
+    static void drawEnemy(Graphics2D g, AssetStore assets, Enemy enemy, double animationSeconds) {
         int x = (int) enemy.getX();
         int y = (int) enemy.getY();
         int radius = enemy.getType().getRadius();
-        drawShadow(g, x, y + radius - 1, radius * 2 + 7, 11);
+        double phase = animationSeconds * 8.0 + enemy.getX() * 0.035 + enemy.getY() * 0.019;
+        int bob = (int) Math.round(Math.sin(phase) * (enemy.isSlowed() ? 1.1 : 2.0));
+        int squash = (int) Math.round(Math.abs(Math.sin(phase)) * 3);
+        drawShadow(g, x, y + radius - 1, radius * 2 + 7 + squash, 11);
         int assetWidth = radius * 2 + 24;
         int assetHeight = radius * 2 + 28;
-        if (assets.draw(g, enemyAssetKey(enemy.getType()), x - assetWidth / 2, y - assetHeight / 2 - 2, assetWidth, assetHeight)) {
+        if (assets.draw(g, enemyAssetKey(enemy.getType()), x - (assetWidth + squash) / 2,
+                y - (assetHeight - squash) / 2 - 2 + bob, assetWidth + squash, assetHeight - squash)) {
             if (enemy.isSlowed()) {
                 g.setColor(new Color(104, 220, 235, 170));
                 g.setStroke(new BasicStroke(2f));
@@ -189,11 +203,11 @@ final class GameArt {
         }
 
         Color body = enemy.getType().getBodyColor();
-        g.setPaint(new GradientPaint(x - radius, y - radius, brighten(body, 32), x + radius, y + radius, darken(body, 20)));
-        g.fillOval(x - radius, y - radius, radius * 2, radius * 2);
+        g.setPaint(new GradientPaint(x - radius, y - radius + bob, brighten(body, 32), x + radius, y + radius + bob, darken(body, 20)));
+        g.fillOval(x - radius - squash / 2, y - radius + bob, radius * 2 + squash, radius * 2 - squash);
         g.setColor(enemy.getType().getBorderColor());
         g.setStroke(new BasicStroke(2f));
-        g.drawOval(x - radius, y - radius, radius * 2, radius * 2);
+        g.drawOval(x - radius - squash / 2, y - radius + bob, radius * 2 + squash, radius * 2 - squash);
 
         if (enemy.getType() == EnemyType.FAST) {
             g.setColor(new Color(255, 230, 140, 150));
@@ -272,6 +286,63 @@ final class GameArt {
         g.fillRoundRect(centerX - 9, centerY - 27, 18, 22, 8, 8);
         g.setColor(new Color(255, 191, 100, 145));
         g.fillOval(centerX - 7, centerY - 31, 14, 10);
+    }
+
+    private static void drawCarrotHitFlash(Graphics2D g, int centerX, int centerY, double hitFlash) {
+        if (hitFlash <= 0) {
+            return;
+        }
+        double progress = Math.min(1.0, hitFlash / 0.34);
+        int alpha = (int) (150 * progress);
+        g.setColor(new Color(255, 104, 87, alpha));
+        g.fillOval(centerX - 31, centerY - 38, 62, 72);
+        g.setColor(new Color(255, 250, 235, (int) (105 * progress)));
+        g.setStroke(new BasicStroke(3f));
+        g.drawOval(centerX - 37, centerY - 48, 74, 90);
+    }
+
+    private static void drawMuzzleFlash(Graphics2D g, Tower tower, int centerX, int centerY, double animationSeconds) {
+        if (tower.getFirePulse() <= 0) {
+            return;
+        }
+        double progress = Math.min(1.0, tower.getFirePulse() / 0.16);
+        int alpha = (int) (220 * progress);
+        int flashSize = 7 + (int) (5 * progress);
+        int flashX = centerX;
+        int flashY = centerY - 42;
+        if (tower.getType() == TowerType.BASIC) {
+            flashX -= 9;
+            flashY += 1;
+        } else if (tower.getType() == TowerType.SPLASH) {
+            flashY += 3;
+        }
+        int flicker = (int) Math.round(Math.sin(animationSeconds * 42) * 2);
+        g.setColor(new Color(255, 242, 143, alpha));
+        g.fillOval(flashX - flashSize / 2, flashY - flashSize / 2, flashSize + flicker, flashSize + flicker);
+        g.setColor(new Color(255, 130, 62, Math.max(0, alpha - 60)));
+        g.setStroke(new BasicStroke(2f));
+        g.drawLine(flashX - flashSize, flashY, flashX + flashSize, flashY);
+        g.drawLine(flashX, flashY - flashSize, flashX, flashY + flashSize);
+    }
+
+    private static void drawProjectileTrail(Graphics2D g, Projectile projectile, int size) {
+        double previousX = projectile.getPreviousX();
+        double previousY = projectile.getPreviousY();
+        double x = projectile.getX();
+        double y = projectile.getY();
+        double distance = Math.hypot(x - previousX, y - previousY);
+        if (distance < 2) {
+            return;
+        }
+        Color color = projectile.getTowerType().getBodyColor();
+        g.setStroke(new BasicStroke(Math.max(3f, size * 0.55f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g.setColor(new Color(color.getRed(), color.getGreen(), color.getBlue(), 95));
+        g.drawLine((int) previousX, (int) previousY, (int) x, (int) y);
+
+        int midX = (int) ((previousX + x) / 2);
+        int midY = (int) ((previousY + y) / 2);
+        g.setColor(new Color(255, 250, 235, 75));
+        g.fillOval(midX - size / 3, midY - size / 3, Math.max(3, size * 2 / 3), Math.max(3, size * 2 / 3));
     }
 
     private static void drawTowerLevelBadge(Graphics2D g, int level, int centerX, int centerY) {

@@ -7,12 +7,16 @@ public final class Projectile {
     private final double speed;
     private double x;
     private double y;
+    private double previousX;
+    private double previousY;
     private double age;
     private boolean expired;
 
     public Projectile(double x, double y, Target target, double damage, TowerType towerType, double speed) {
         this.x = x;
         this.y = y;
+        this.previousX = x;
+        this.previousY = y;
         this.target = target;
         this.damage = damage;
         this.towerType = towerType;
@@ -21,6 +25,8 @@ public final class Projectile {
 
     public void update(double deltaSeconds) {
         age += deltaSeconds;
+        previousX = x;
+        previousY = y;
         if (age > 3 || target.isDead() || target.hasReachedGoal()) {
             expired = true;
             return;
@@ -65,5 +71,17 @@ public final class Projectile {
 
     public double getY() {
         return y;
+    }
+
+    public double getPreviousX() {
+        return previousX;
+    }
+
+    public double getPreviousY() {
+        return previousY;
+    }
+
+    public double getAge() {
+        return age;
     }
 }

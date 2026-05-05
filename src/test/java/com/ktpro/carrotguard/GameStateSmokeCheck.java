@@ -44,6 +44,7 @@ public final class GameStateSmokeCheck {
         require(!state.tryBuildSelectedTower(TowerType.SPLASH), "splash tower should be unaffordable after two builds");
         verifyTowerUpgradeFlow();
         verifyTowerUpgradeStats();
+        verifyCombatAnimationState();
         verifyEnemyReachesGoalAtCarrot();
         verifyEnemiesCanReachGoalOnConfiguredLevels();
         verifyLeaksCanEndGame();
@@ -154,6 +155,22 @@ public final class GameStateSmokeCheck {
         require(state.getLevelNumber() == 2, "startLevel should load a requested level");
         require(state.getTowers().isEmpty(), "startLevel should reset towers");
         require(state.getWave() == 1, "startLevel should reset wave progress");
+    }
+
+    private static void verifyCombatAnimationState() {
+        Tower tower = new Tower(1, 2, TowerType.BASIC);
+        Enemy enemy = new Enemy(GamePath.defaultPath(), 1, EnemyType.NORMAL);
+        Projectile projectile = tower.fireAt(enemy);
+        require(tower.getFirePulse() > 0, "tower fire should create a visual recoil pulse");
+        tower.update(0.2);
+        require(tower.getFirePulse() == 0, "tower fire pulse should expire");
+
+        double startX = projectile.getX();
+        double startY = projectile.getY();
+        projectile.update(0.05);
+        require(projectile.getPreviousX() == startX, "projectile should remember previous x for trail rendering");
+        require(projectile.getPreviousY() == startY, "projectile should remember previous y for trail rendering");
+        require(projectile.getAge() > 0, "projectile should expose age for draw pulse");
     }
 
     private static void verifyEnemyReachesGoalAtCarrot() {
