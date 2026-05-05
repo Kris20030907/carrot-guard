@@ -27,6 +27,16 @@ public final class WaveDefinition {
         return total;
     }
 
+    public int getEnemyCount(EnemyType type) {
+        int total = 0;
+        for (WaveEntry entry : entries) {
+            if (entry.type() == type) {
+                total += entry.count();
+            }
+        }
+        return total;
+    }
+
     public EnemyType enemyTypeAt(int spawnIndex) {
         int remaining = spawnIndex;
         for (WaveEntry entry : entries) {
@@ -50,4 +60,3 @@ public final class WaveDefinition {
         return clearBonus;
     }
 }
-

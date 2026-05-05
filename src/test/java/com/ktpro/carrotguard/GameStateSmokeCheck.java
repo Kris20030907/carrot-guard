@@ -125,6 +125,34 @@ public final class GameStateSmokeCheck {
         require(thirdLevel.getWaveCount() == 6, "third level should define six waves");
         require(thirdLevel.getPath().hasOnlyOrthogonalSteps(), "third level path should be orthogonal");
         require(thirdLevel.getObstacles().size() == 8, "third level should define eight obstacles");
+        verifyLevelPacing(config, secondLevel, thirdLevel);
+    }
+
+    private static void verifyLevelPacing(LevelConfig firstLevel, LevelConfig secondLevel, LevelConfig thirdLevel) {
+        require(firstLevel.getWave(0).getEnemyCount(EnemyType.FAST) == 0, "level one first wave should teach normal enemies");
+        require(firstLevel.getWave(0).getEnemyCount(EnemyType.TANK) == 0, "level one first wave should not include tanks");
+        require(firstLevel.getWave(3).getEnemyCount(EnemyType.TANK) > 0, "level one should introduce tanks before the finale");
+        require(hasAllEnemyTypes(firstLevel.getWave(5)), "level one finale should mix all enemy types");
+        require(firstLevel.getWave(5).getTotalEnemyCount() > firstLevel.getWave(0).getTotalEnemyCount(),
+                "level one finale should be denser than the opener");
+
+        require(secondLevel.getWave(0).getEnemyCount(EnemyType.FAST) > 0, "level two should open with fast pressure");
+        require(secondLevel.getWave(1).getEnemyCount(EnemyType.TANK) > 0, "level two should introduce tanks earlier");
+        require(hasAllEnemyTypes(secondLevel.getWave(3)), "level two middle waves should overlap enemy roles");
+        require(secondLevel.getWave(5).getTotalEnemyCount() > secondLevel.getWave(0).getTotalEnemyCount(),
+                "level two finale should be denser than the opener");
+
+        require(hasAllEnemyTypes(thirdLevel.getWave(2)), "level three should combine all roles by wave three");
+        require(thirdLevel.getWave(5).getSpawnInterval() < thirdLevel.getWave(0).getSpawnInterval(),
+                "level three finale should spawn faster than the opener");
+        require(thirdLevel.getWave(5).getEnemyCount(EnemyType.TANK) >= secondLevel.getWave(5).getEnemyCount(EnemyType.TANK),
+                "level three finale should keep tank pressure high");
+    }
+
+    private static boolean hasAllEnemyTypes(WaveDefinition wave) {
+        return wave.getEnemyCount(EnemyType.NORMAL) > 0
+                && wave.getEnemyCount(EnemyType.FAST) > 0
+                && wave.getEnemyCount(EnemyType.TANK) > 0;
     }
 
     private static void verifyTowerUpgradeStats() {
