@@ -15,6 +15,7 @@ public final class AssetStore {
     private static final String RESOURCE_ROOT = "/assets/";
 
     private final Map<AssetKey, BufferedImage> images = new EnumMap<>(AssetKey.class);
+    private final Map<AssetKey, Map<ImageSize, BufferedImage>> scaledImages = new EnumMap<>(AssetKey.class);
 
     private AssetStore() {
     }
@@ -50,17 +51,20 @@ public final class AssetStore {
         return images.size();
     }
 
+    int getCachedScaledImageCount() {
+        int total = 0;
+        for (Map<ImageSize, BufferedImage> cache : scaledImages.values()) {
+            total += cache.size();
+        }
+        return total;
+    }
+
     public boolean draw(Graphics2D g, AssetKey key, int x, int y, int width, int height) {
         BufferedImage image = images.get(key);
-        if (image == null) {
+        if (image == null || width <= 0 || height <= 0) {
             return false;
         }
-        Object oldHint = g.getRenderingHint(RenderingHints.KEY_INTERPOLATION);
-        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-        g.drawImage(image, x, y, width, height, null);
-        if (oldHint != null) {
-            g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, oldHint);
-        }
+        g.drawImage(scaledImage(key, image, width, height), x, y, null);
         return true;
     }
 
@@ -78,7 +82,28 @@ public final class AssetStore {
         BufferedImage image = ImageIO.read(input);
         if (image != null) {
             images.put(key, toCompatibleImage(image));
+            scaledImages.remove(key);
         }
+    }
+
+    private BufferedImage scaledImage(AssetKey key, BufferedImage image, int width, int height) {
+        if (image.getWidth() == width && image.getHeight() == height) {
+            return image;
+        }
+        ImageSize size = new ImageSize(width, height);
+        Map<ImageSize, BufferedImage> cache = scaledImages.computeIfAbsent(key, ignored -> new java.util.HashMap<>());
+        return cache.computeIfAbsent(size, ignored -> createScaledImage(image, width, height));
+    }
+
+    private BufferedImage createScaledImage(BufferedImage image, int width, int height) {
+        BufferedImage scaled = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = scaled.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.drawImage(image, 0, 0, width, height, null);
+        g.dispose();
+        return scaled;
     }
 
     private BufferedImage toCompatibleImage(BufferedImage image) {
@@ -87,5 +112,8 @@ public final class AssetStore {
         g.drawImage(image, 0, 0, null);
         g.dispose();
         return converted;
+    }
+
+    private record ImageSize(int width, int height) {
     }
 }

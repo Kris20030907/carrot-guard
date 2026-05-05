@@ -25,8 +25,22 @@ public final class AssetStoreSmokeCheck {
         require(directoryStore.getLoadedCount() == 1, "directory loader should load one png");
         require(directoryStore.hasAsset(AssetKey.CARROT), "directory loader should load carrot asset");
         require(!directoryStore.hasAsset(AssetKey.ENEMY_FAST), "directory loader should not fake missing assets");
+        verifyScaledDrawCache(directoryStore);
 
         System.out.println("AssetStore smoke check passed");
+    }
+
+    private static void verifyScaledDrawCache(AssetStore store) {
+        BufferedImage target = new BufferedImage(64, 64, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = target.createGraphics();
+        require(store.getCachedScaledImageCount() == 0, "scaled cache should start empty");
+        require(store.draw(g, AssetKey.CARROT, 0, 0, 32, 40), "draw should render loaded asset");
+        require(store.getCachedScaledImageCount() == 1, "first scaled draw should cache one variant");
+        require(store.draw(g, AssetKey.CARROT, 2, 2, 32, 40), "draw should render cached asset");
+        require(store.getCachedScaledImageCount() == 1, "same size draw should reuse cached variant");
+        require(store.draw(g, AssetKey.CARROT, 4, 4, 34, 42), "draw should render another size");
+        require(store.getCachedScaledImageCount() == 2, "new size draw should cache another variant");
+        g.dispose();
     }
 
     private static Path tempAssetDirectory() {
