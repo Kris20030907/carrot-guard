@@ -536,6 +536,10 @@ public final class GameState {
         return waveIndex + 1;
     }
 
+    public String getWaveLabel() {
+        return currentWave().getLabel();
+    }
+
     public int getLevelNumber() {
         return config.getLevelNumber();
     }

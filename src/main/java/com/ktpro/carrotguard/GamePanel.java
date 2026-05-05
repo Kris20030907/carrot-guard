@@ -53,6 +53,8 @@ public final class GamePanel extends JPanel {
     private int observedClearedObstacleEvents;
     private double animationSeconds;
     private double carrotHitFlash;
+    private double waveBannerTimer;
+    private int observedWave = -1;
     private boolean victoryRecorded;
 
     public GamePanel() {
@@ -128,6 +130,7 @@ public final class GamePanel extends JPanel {
                 if (state.advanceToNextLevel()) {
                     victoryRecorded = false;
                     syncSoundCounters();
+                    showWaveBanner();
                 }
             } else if (pauseButton.contains(x, y)) {
                 soundEffects.play(SoundEffect.CLICK);
@@ -137,6 +140,7 @@ public final class GamePanel extends JPanel {
                 state.restart();
                 victoryRecorded = false;
                 syncSoundCounters();
+                showWaveBanner();
             }
             return;
         }
@@ -275,10 +279,12 @@ public final class GamePanel extends JPanel {
         double frameSeconds = Math.min(deltaSeconds, 0.05);
         animationSeconds += frameSeconds;
         carrotHitFlash = Math.max(0, carrotHitFlash - frameSeconds);
+        waveBannerTimer = Math.max(0, waveBannerTimer - frameSeconds);
         if (screen == PanelScreen.PLAYING) {
             boolean wasWon = state.isWon();
             boolean wasGameOver = state.isGameOver();
             state.update(frameSeconds * state.getSpeedMultiplier());
+            syncWaveBanner();
             playStateSounds();
             if (!wasWon && state.isWon()) {
                 recordVictoryIfNeeded();
@@ -313,6 +319,7 @@ public final class GamePanel extends JPanel {
         drawTowerInfoPanel(g);
         drawCarrotInfoPanel(g);
         drawContextMenu(g);
+        drawWaveBanner(g);
         drawOverlay(g);
         g.dispose();
     }
@@ -322,6 +329,7 @@ public final class GamePanel extends JPanel {
         screen = PanelScreen.PLAYING;
         victoryRecorded = false;
         syncSoundCounters();
+        showWaveBanner();
         hoverLevelIndex = -1;
         hoverCol = -1;
         hoverRow = -1;
@@ -401,6 +409,17 @@ public final class GamePanel extends JPanel {
         observedHitEvents = state.getHitEventCount();
         observedLeakEvents = state.getLeakEventCount();
         observedClearedObstacleEvents = state.getClearedObstacleEventCount();
+    }
+
+    private void syncWaveBanner() {
+        if (!state.isWon() && !state.isGameOver() && observedWave != state.getWave()) {
+            showWaveBanner();
+        }
+    }
+
+    private void showWaveBanner() {
+        observedWave = state.getWave();
+        waveBannerTimer = 2.35;
     }
 
     private void syncSoundSettings() {
@@ -578,6 +597,8 @@ public final class GamePanel extends JPanel {
         g.drawString("Lives: " + state.getLives(), 140, 62);
         g.drawString("Level: " + state.getLevelNumber(), 250, 62);
         g.drawString("Wave: " + state.getWave() + "/" + state.getMaxWave(), 350, 62);
+        g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
+        g.drawString(state.getWaveLabel(), 350, 82);
 
         drawSelectionHint(g);
         drawButton(g, settingsButton, "Settings", true);
@@ -608,6 +629,30 @@ public final class GamePanel extends JPanel {
             g.drawString("Build: select a grass tile", 20, 96);
         }
         g.drawString("Enemies: " + progress, 470, 62);
+    }
+
+    private void drawWaveBanner(Graphics2D g) {
+        if (waveBannerTimer <= 0 || state.isWon() || state.isGameOver()) {
+            return;
+        }
+        double fade = Math.min(1.0, Math.min(waveBannerTimer / 0.35, (2.35 - waveBannerTimer) / 0.25));
+        int alpha = Math.max(0, Math.min(230, (int) (230 * fade)));
+        int panelWidth = 306;
+        int panelHeight = 62;
+        int x = (WIDTH - panelWidth) / 2;
+        int y = HUD_HEIGHT + 18;
+
+        g.setColor(new Color(40, 55, 47, alpha));
+        g.fillRoundRect(x, y, panelWidth, panelHeight, 12, 12);
+        g.setColor(new Color(255, 246, 164, Math.min(210, alpha)));
+        g.setStroke(new BasicStroke(2f));
+        g.drawRoundRect(x, y, panelWidth, panelHeight, 12, 12);
+
+        g.setColor(new Color(255, 250, 235, Math.min(255, alpha + 20)));
+        g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 15));
+        drawCenteredAt(g, "Wave " + state.getWave() + "/" + state.getMaxWave(), WIDTH / 2, y + 24);
+        g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 20));
+        drawCenteredAt(g, state.getWaveLabel(), WIDTH / 2, y + 49);
     }
 
     private void drawButton(Graphics2D g, Rectangle rect, String label, boolean enabled) {

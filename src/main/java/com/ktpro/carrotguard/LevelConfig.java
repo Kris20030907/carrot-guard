@@ -92,23 +92,23 @@ public final class LevelConfig {
                         new ObstacleDefinition(ObstacleKind.ROCK, 11, 8)
                 ),
                 List.of(
-                        WaveDefinition.of(0.92, 2.3, 24,
+                        WaveDefinition.of("Warmup", 0.92, 2.3, 24,
                                 new WaveEntry(EnemyType.NORMAL, 7)),
-                        WaveDefinition.of(0.82, 2.2, 28,
+                        WaveDefinition.of("First Speed Check", 0.82, 2.2, 28,
                                 new WaveEntry(EnemyType.NORMAL, 8),
                                 new WaveEntry(EnemyType.FAST, 3)),
-                        WaveDefinition.of(0.76, 2.2, 34,
+                        WaveDefinition.of("Slow Tower Cue", 0.76, 2.2, 34,
                                 new WaveEntry(EnemyType.NORMAL, 6),
                                 new WaveEntry(EnemyType.FAST, 7)),
-                        WaveDefinition.of(0.84, 2.4, 42,
+                        WaveDefinition.of("Armor Check", 0.84, 2.4, 42,
                                 new WaveEntry(EnemyType.NORMAL, 8),
                                 new WaveEntry(EnemyType.FAST, 4),
                                 new WaveEntry(EnemyType.TANK, 2)),
-                        WaveDefinition.of(0.70, 2.5, 52,
+                        WaveDefinition.of("Mixed Pressure", 0.70, 2.5, 52,
                                 new WaveEntry(EnemyType.FAST, 8),
                                 new WaveEntry(EnemyType.NORMAL, 6),
                                 new WaveEntry(EnemyType.TANK, 3)),
-                        WaveDefinition.of(0.64, 0, 78,
+                        WaveDefinition.of("Final Exam", 0.64, 0, 78,
                                 new WaveEntry(EnemyType.NORMAL, 8),
                                 new WaveEntry(EnemyType.FAST, 8),
                                 new WaveEntry(EnemyType.TANK, 5))
@@ -195,7 +195,7 @@ public final class LevelConfig {
             if (value == null) {
                 break;
             }
-            waves.add(parseWave(value));
+            waves.add(parseWave(labelForWave(properties, index), value));
         }
         if (waves.isEmpty()) {
             throw new IllegalArgumentException("at least one wave is required");
@@ -203,7 +203,12 @@ public final class LevelConfig {
         return waves;
     }
 
-    private static WaveDefinition parseWave(String value) {
+    private static String labelForWave(Properties properties, int index) {
+        String label = properties.getProperty("wave." + index + ".label");
+        return label == null || label.isBlank() ? "Wave " + index : label.trim();
+    }
+
+    private static WaveDefinition parseWave(String label, String value) {
         String[] parts = value.split(",", 4);
         if (parts.length != 4) {
             throw new IllegalArgumentException("wave must be spawnInterval,nextWaveDelay,clearBonus,entries: " + value);
@@ -221,7 +226,7 @@ public final class LevelConfig {
                     parseEnum(EnemyType.class, entry[0], "enemy type"),
                     parseNumber(entry[1], "enemy count")));
         }
-        return WaveDefinition.of(spawnInterval, nextWaveDelay, clearBonus, entries.toArray(WaveEntry[]::new));
+        return WaveDefinition.of(label, spawnInterval, nextWaveDelay, clearBonus, entries.toArray(WaveEntry[]::new));
     }
 
     private static int parseNumber(String value, String label) {

@@ -4,11 +4,13 @@ import java.util.List;
 
 public final class WaveDefinition {
     private final List<WaveEntry> entries;
+    private final String label;
     private final double spawnInterval;
     private final double nextWaveDelay;
     private final int clearBonus;
 
-    private WaveDefinition(double spawnInterval, double nextWaveDelay, int clearBonus, List<WaveEntry> entries) {
+    private WaveDefinition(String label, double spawnInterval, double nextWaveDelay, int clearBonus, List<WaveEntry> entries) {
+        this.label = label;
         this.spawnInterval = spawnInterval;
         this.nextWaveDelay = nextWaveDelay;
         this.clearBonus = clearBonus;
@@ -16,7 +18,15 @@ public final class WaveDefinition {
     }
 
     public static WaveDefinition of(double spawnInterval, double nextWaveDelay, int clearBonus, WaveEntry... entries) {
-        return new WaveDefinition(spawnInterval, nextWaveDelay, clearBonus, List.of(entries));
+        return of("Wave", spawnInterval, nextWaveDelay, clearBonus, entries);
+    }
+
+    public static WaveDefinition of(String label, double spawnInterval, double nextWaveDelay, int clearBonus, WaveEntry... entries) {
+        return new WaveDefinition(label, spawnInterval, nextWaveDelay, clearBonus, List.of(entries));
+    }
+
+    public String getLabel() {
+        return label;
     }
 
     public int getTotalEnemyCount() {

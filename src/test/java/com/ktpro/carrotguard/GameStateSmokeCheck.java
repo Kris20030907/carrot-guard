@@ -104,6 +104,7 @@ public final class GameStateSmokeCheck {
         require(config.getStartingCoins() == 160, "resource level should define starting coins");
         require(config.getStartingLives() == 10, "resource level should define starting lives");
         require(config.getWaveCount() == 6, "resource level should define six waves");
+        require("Warmup".equals(config.getWave(0).getLabel()), "first level should load wave labels");
         require(config.getObstacles().size() == 6, "resource level should define six obstacles");
         require(config.getPath().hasOnlyOrthogonalSteps(), "resource path should be orthogonal");
         require(config.getPath().containsTile(5, 4), "resource path should include the first turn connector");
@@ -116,6 +117,7 @@ public final class GameStateSmokeCheck {
         require(secondLevel.getLevelNumber() == 2, "second level should report its level number");
         require(secondLevel.getStartingCoins() == 180, "second level should define starting coins");
         require(secondLevel.getWaveCount() == 6, "second level should define six waves");
+        require("Fast Opener".equals(secondLevel.getWave(0).getLabel()), "second level should load wave labels");
         require(secondLevel.getPath().hasOnlyOrthogonalSteps(), "second level path should be orthogonal");
         require(secondLevel.getObstacles().size() == 7, "second level should define seven obstacles");
         require(LevelConfig.hasLevel(3), "third level resource should be available");
@@ -123,8 +125,11 @@ public final class GameStateSmokeCheck {
         require(thirdLevel.getLevelNumber() == 3, "third level should report its level number");
         require(thirdLevel.getStartingCoins() == 200, "third level should define starting coins");
         require(thirdLevel.getWaveCount() == 6, "third level should define six waves");
+        require("Mixed Opener".equals(thirdLevel.getWave(0).getLabel()), "third level should load wave labels");
         require(thirdLevel.getPath().hasOnlyOrthogonalSteps(), "third level path should be orthogonal");
         require(thirdLevel.getObstacles().size() == 8, "third level should define eight obstacles");
+        require("Warmup".equals(LevelConfig.defaultFirstLevel().getWave(0).getLabel()),
+                "fallback first level should keep wave labels");
         verifyLevelPacing(config, secondLevel, thirdLevel);
     }
 

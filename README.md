@@ -81,6 +81,7 @@ java -cp target/classes:/tmp/carrot-guard-test-out com.ktpro.carrotguard.AssetSp
 - `path`：敌人路径格子，格式为 `col,row;col,row`
 - `obstacles`：障碍物，格式为 `KIND:col,row`
 - `wave.N`：波次，格式为 `spawnInterval,nextWaveDelay,clearBonus,ENEMY:count;ENEMY:count`
+- `wave.N.label`：波次提示标签，会显示在 HUD 和开波横幅中
 
 ## 操作
 
