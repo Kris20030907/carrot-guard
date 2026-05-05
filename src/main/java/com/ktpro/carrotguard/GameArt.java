@@ -169,9 +169,8 @@ final class GameArt {
         int size = projectile.getTowerType().hasSplashEffect() ? 13 : 10;
         drawProjectileTrail(g, projectile, size);
         drawShadow(g, x, y + 4, size + 4, 5);
-        int pulse = (int) Math.round(2 * Math.sin(animationSeconds * 18 + projectile.getAge() * 8));
-        if (assets.draw(g, projectileAssetKey(projectile.getTowerType()), x - size - pulse / 2, y - size - pulse / 2,
-                size * 2 + pulse, size * 2 + pulse)) {
+        drawProjectilePulse(g, projectile, size, animationSeconds);
+        if (assets.draw(g, projectileAssetKey(projectile.getTowerType()), x - size, y - size, size * 2, size * 2)) {
             return;
         }
         g.setPaint(new GradientPaint(x - size / 2, y - size / 2, brighten(projectile.getTowerType().getBodyColor(), 48),
@@ -187,12 +186,11 @@ final class GameArt {
         int radius = enemy.getType().getRadius();
         double phase = animationSeconds * 8.0 + enemy.getX() * 0.035 + enemy.getY() * 0.019;
         int bob = (int) Math.round(Math.sin(phase) * (enemy.isSlowed() ? 1.1 : 2.0));
-        int squash = (int) Math.round(Math.abs(Math.sin(phase)) * 3);
-        drawShadow(g, x, y + radius - 1, radius * 2 + 7 + squash, 11);
+        drawShadow(g, x, y + radius - 1, radius * 2 + 7, 11);
         int assetWidth = radius * 2 + 24;
         int assetHeight = radius * 2 + 28;
-        if (assets.draw(g, enemyAssetKey(enemy.getType()), x - (assetWidth + squash) / 2,
-                y - (assetHeight - squash) / 2 - 2 + bob, assetWidth + squash, assetHeight - squash)) {
+        if (assets.draw(g, enemyAssetKey(enemy.getType()), x - assetWidth / 2,
+                y - assetHeight / 2 - 2 + bob, assetWidth, assetHeight)) {
             if (enemy.isSlowed()) {
                 g.setColor(new Color(104, 220, 235, 170));
                 g.setStroke(new BasicStroke(2f));
@@ -204,10 +202,10 @@ final class GameArt {
 
         Color body = enemy.getType().getBodyColor();
         g.setPaint(new GradientPaint(x - radius, y - radius + bob, brighten(body, 32), x + radius, y + radius + bob, darken(body, 20)));
-        g.fillOval(x - radius - squash / 2, y - radius + bob, radius * 2 + squash, radius * 2 - squash);
+        g.fillOval(x - radius, y - radius + bob, radius * 2, radius * 2);
         g.setColor(enemy.getType().getBorderColor());
         g.setStroke(new BasicStroke(2f));
-        g.drawOval(x - radius - squash / 2, y - radius + bob, radius * 2 + squash, radius * 2 - squash);
+        g.drawOval(x - radius, y - radius + bob, radius * 2, radius * 2);
 
         if (enemy.getType() == EnemyType.FAST) {
             g.setColor(new Color(255, 230, 140, 150));
@@ -343,6 +341,19 @@ final class GameArt {
         int midY = (int) ((previousY + y) / 2);
         g.setColor(new Color(255, 250, 235, 75));
         g.fillOval(midX - size / 3, midY - size / 3, Math.max(3, size * 2 / 3), Math.max(3, size * 2 / 3));
+    }
+
+    private static void drawProjectilePulse(Graphics2D g, Projectile projectile, int size, double animationSeconds) {
+        int x = (int) projectile.getX();
+        int y = (int) projectile.getY();
+        double shimmer = 0.5 + 0.5 * Math.sin(animationSeconds * 18 + projectile.getAge() * 8);
+        int radius = size + 2 + (int) Math.round(shimmer * 3);
+        Color color = projectile.getTowerType().getBodyColor();
+        g.setColor(new Color(color.getRed(), color.getGreen(), color.getBlue(), 62));
+        g.fillOval(x - radius, y - radius, radius * 2, radius * 2);
+        g.setColor(new Color(255, 250, 235, 70));
+        g.setStroke(new BasicStroke(1.5f));
+        g.drawOval(x - radius, y - radius, radius * 2, radius * 2);
     }
 
     private static void drawTowerLevelBadge(Graphics2D g, int level, int centerX, int centerY) {
