@@ -3,17 +3,25 @@ package com.ktpro.carrotguard;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.Clip;
+import javax.sound.sampled.LineEvent;
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public final class SoundEffects {
     private static final float SAMPLE_RATE = 22_050f;
     private static final int HIT_THROTTLE_MS = 75;
 
     private final Map<SoundEffect, byte[]> samples = new EnumMap<>(SoundEffect.class);
-    private boolean userEnabled = true;
-    private boolean audioAvailable = true;
-    private double volume = 0.7;
+    private final ExecutorService audioExecutor = Executors.newSingleThreadExecutor(runnable -> {
+        Thread thread = new Thread(runnable, "carrot-guard-audio");
+        thread.setDaemon(true);
+        return thread;
+    });
+    private volatile boolean userEnabled = true;
+    private volatile boolean audioAvailable = true;
+    private volatile double volume = 0.7;
     private long lastHitMillis;
 
     public SoundEffects() {
@@ -38,15 +46,18 @@ public final class SoundEffects {
         if (data == null) {
             return;
         }
+        double playbackVolume = volume;
+        audioExecutor.execute(() -> playClip(data, playbackVolume));
+    }
+
+    private void playClip(byte[] data, double playbackVolume) {
         try {
             Clip clip = AudioSystem.getClip();
-            byte[] adjusted = scaled(data);
+            byte[] adjusted = scaled(data, playbackVolume);
             clip.open(format(), adjusted, 0, adjusted.length);
             clip.addLineListener(event -> {
-                switch (event.getType().toString()) {
-                    case "Stop", "Close" -> clip.close();
-                    default -> {
-                    }
+                if (event.getType() == LineEvent.Type.STOP) {
+                    clip.close();
                 }
             });
             clip.start();
@@ -84,10 +95,10 @@ public final class SoundEffects {
         return new AudioFormat(SAMPLE_RATE, 8, 1, true, false);
     }
 
-    private byte[] scaled(byte[] data) {
+    private byte[] scaled(byte[] data, double playbackVolume) {
         byte[] adjusted = new byte[data.length];
         for (int i = 0; i < data.length; i++) {
-            adjusted[i] = (byte) Math.max(-128, Math.min(127, (int) Math.round(data[i] * volume)));
+            adjusted[i] = (byte) Math.max(-128, Math.min(127, (int) Math.round(data[i] * playbackVolume)));
         }
         return adjusted;
     }

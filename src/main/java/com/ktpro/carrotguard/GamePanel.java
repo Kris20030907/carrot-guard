@@ -14,6 +14,7 @@ import java.awt.RenderingHints;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
+import java.awt.image.BufferedImage;
 import java.util.List;
 
 public final class GamePanel extends JPanel {
@@ -56,6 +57,8 @@ public final class GamePanel extends JPanel {
     private double waveBannerTimer;
     private int observedWave = -1;
     private boolean victoryRecorded;
+    private BufferedImage cachedMapLayer;
+    private int cachedMapLevel = -1;
 
     public GamePanel() {
         this(GameProgress.loadDefault());
@@ -667,11 +670,31 @@ public final class GamePanel extends JPanel {
     }
 
     private void drawMap(Graphics2D g) {
-        int top = HUD_HEIGHT;
+        g.drawImage(mapLayer(), 0, HUD_HEIGHT, null);
+
+        int[] goal = state.getPath().getGoalTile();
+        int carrotX = goal[0] * TILE_SIZE + TILE_SIZE / 2;
+        int carrotY = HUD_HEIGHT + goal[1] * TILE_SIZE + TILE_SIZE / 2;
+        GameArt.drawCarrot(g, assets, carrotX, carrotY, state.isCarrotSelected(), carrotHitFlash);
+        drawCarrotHealthBar(g, carrotX, carrotY);
+    }
+
+    private BufferedImage mapLayer() {
+        if (cachedMapLayer == null || cachedMapLevel != state.getLevelNumber()) {
+            cachedMapLayer = renderMapLayer();
+            cachedMapLevel = state.getLevelNumber();
+        }
+        return cachedMapLayer;
+    }
+
+    private BufferedImage renderMapLayer() {
+        BufferedImage image = new BufferedImage(WIDTH, ROWS * TILE_SIZE, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = image.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         for (int row = 0; row < ROWS; row++) {
             for (int col = 0; col < COLS; col++) {
                 int x = col * TILE_SIZE;
-                int y = top + row * TILE_SIZE;
+                int y = row * TILE_SIZE;
                 boolean path = state.getPath().containsTile(col, row);
                 if (path) {
                     GameArt.drawPathTile(g, assets, x, y, col, row);
@@ -681,13 +704,10 @@ public final class GamePanel extends JPanel {
             }
         }
 
+        g.translate(0, -HUD_HEIGHT);
         GameArt.drawPathRibbon(g, state.getPath());
-
-        int[] goal = state.getPath().getGoalTile();
-        int carrotX = goal[0] * TILE_SIZE + TILE_SIZE / 2;
-        int carrotY = HUD_HEIGHT + goal[1] * TILE_SIZE + TILE_SIZE / 2;
-        GameArt.drawCarrot(g, assets, carrotX, carrotY, state.isCarrotSelected(), carrotHitFlash);
-        drawCarrotHealthBar(g, carrotX, carrotY);
+        g.dispose();
+        return image;
     }
 
     private void drawCarrotHealthBar(Graphics2D g, int carrotX, int carrotY) {

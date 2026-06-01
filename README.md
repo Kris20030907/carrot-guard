@@ -35,6 +35,12 @@
 
 ## 运行
 
+项目需要 JDK 17。使用 SDKMAN 时可以先执行：
+
+```bash
+sdk env
+```
+
 ```bash
 mvn package
 java -jar target/carrot-guard-0.1.0-SNAPSHOT.jar
@@ -52,13 +58,7 @@ java -cp out com.ktpro.carrotguard.Main
 ## 基础检查
 
 ```bash
-mvn -q -DskipTests package
-javac -cp target/classes -d /tmp/carrot-guard-test-out $(find src/test/java -name "*.java")
-java -cp target/classes:/tmp/carrot-guard-test-out com.ktpro.carrotguard.GameStateSmokeCheck
-java -cp target/classes:/tmp/carrot-guard-test-out com.ktpro.carrotguard.GamePanelRenderCheck
-java -cp target/classes:/tmp/carrot-guard-test-out com.ktpro.carrotguard.GameProgressSmokeCheck
-java -cp target/classes:/tmp/carrot-guard-test-out com.ktpro.carrotguard.SoundEffectsSmokeCheck
-java -cp target/classes:/tmp/carrot-guard-test-out com.ktpro.carrotguard.AssetStoreSmokeCheck
+mvn test
 ```
 
 ## 贴图资源
